@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Receipt, TrendingDown, Calendar, Tag } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import Badge from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/queryClient";
 
@@ -57,6 +57,8 @@ interface ExpenseForm {
 
 export default function Expenses() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<any>(null);
   const [expenseForm, setExpenseForm] = useState<ExpenseForm>({ 
     category: '', 
     amount: '', 
@@ -66,14 +68,16 @@ export default function Expenses() {
   const { toast } = useToast();
 
   // Fetch expenses data
-  const { data: expensesData = [], isLoading: expensesLoading } = useQuery({
+  const { data: expensesDataRaw, isLoading: expensesLoading } = useQuery<any[]>({
     queryKey: ['/api/expenses']
   });
+  const expensesData: any[] = Array.isArray(expensesDataRaw) ? expensesDataRaw : [];
 
   // Fetch expense categories
-  const { data: categoriesData = [] } = useQuery({
+  const { data: categoriesDataRaw } = useQuery<any[]>({
     queryKey: ['/api/expense-categories']
   });
+  const categoriesData: any[] = Array.isArray(categoriesDataRaw) ? categoriesDataRaw : [];
 
   // Calculate stats from real data
   const stats = {
@@ -137,21 +141,65 @@ export default function Expenses() {
   const handleAddExpense = () => {
     if (!isFormValid) return;
     
-    const categoryId = categoriesData.find((cat: any) => cat.name === expenseForm.category)?.id;
-    
-    const expenseData = {
-      categoryId: categoryId || null,
+    const category = categoriesData.find((cat: any) => cat.name === expenseForm.category);
+    const expenseData: any = {
       amount: parseFloat(expenseForm.amount),
       description: expenseForm.description,
-      notes: expenseForm.notes || null
+      notes: expenseForm.notes || undefined
     };
-    
+    if (category && typeof category.id === 'number') {
+      expenseData.categoryId = category.id;
+    }
     addExpenseMutation.mutate(expenseData);
   };
 
   const handleEdit = (row: TableRow) => {
-    console.log('Edit expense:', row);
-    // TODO: implement edit functionality
+    setEditingExpense(row);
+    setExpenseForm({
+      category: row.category || '',
+      amount: row.amount?.toString() ?? '',
+      description: row.description || '',
+      notes: row.notes || ''
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const editExpenseMutation = useMutation({
+    mutationFn: (data: any) => {
+      return apiRequest('PUT', `/api/expenses/${editingExpense?.id}`, data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Expense Updated",
+        description: `Expense record has been updated.`,
+      });
+      setExpenseForm({ category: '', amount: '', description: '', notes: '' });
+      setEditingExpense(null);
+      setIsEditModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/analytics/dashboard'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update expense",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleEditExpense = () => {
+    if (!isFormValid) return;
+    const category = categoriesData.find((cat: any) => cat.name === expenseForm.category);
+    const expenseData: any = {
+      amount: parseFloat(expenseForm.amount),
+      description: expenseForm.description,
+      notes: expenseForm.notes || undefined
+    };
+    if (category && typeof category.id === 'number') {
+      expenseData.categoryId = category.id;
+    }
+    editExpenseMutation.mutate(expenseData);
   };
 
   const handleDelete = (row: TableRow) => {
@@ -199,7 +247,7 @@ export default function Expenses() {
           value={`ZMW ${stats.thisMonth.toLocaleString()}`}
           subtitle="current month"
           icon={Calendar}
-          variant="secondary"
+          variant="default"
         />
         
         <StatsCard
@@ -215,7 +263,7 @@ export default function Expenses() {
           value={`ZMW ${stats.avgExpense.toLocaleString()}`}
           subtitle="per transaction"
           icon={TrendingDown}
-          variant="secondary"
+          variant="default"
         />
       </div>
 
@@ -224,7 +272,7 @@ export default function Expenses() {
         title="Expense Records"
         columns={expenseColumns}
         data={formattedExpensesData}
-        loading={expensesLoading}
+        isLoading={expensesLoading}
         searchPlaceholder="Search expenses..."
         onAdd={() => setIsAddModalOpen(true)}
         onEdit={handleEdit}
@@ -241,7 +289,76 @@ export default function Expenses() {
         description="Record a new business expense"
         onSubmit={handleAddExpense}
         submitLabel="Add Expense"
-        isSubmitting={addExpenseMutation.isPending}
+        isLoading={addExpenseMutation.isPending}
+        submitDisabled={!isFormValid}
+      >
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="category">Category</Label>
+            <Select value={expenseForm.category} onValueChange={(value) => 
+              setExpenseForm(prev => ({ ...prev, category: value }))
+            }>
+              <SelectTrigger data-testid="select-category">
+                <SelectValue placeholder="Select expense category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categoriesData.map((category: any) => (
+                  <SelectItem key={category.id} value={category.name}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="amount">Amount (ZMW)</Label>
+            <Input
+              id="amount"
+              type="number"
+              step="0.01"
+              value={expenseForm.amount}
+              onChange={(e) => setExpenseForm(prev => ({ ...prev, amount: e.target.value }))}
+              placeholder="0.00"
+              min="0.01"
+              data-testid="input-amount"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Input
+              id="description"
+              value={expenseForm.description}
+              onChange={(e) => setExpenseForm(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Brief description of the expense"
+              data-testid="input-description"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="notes">Additional Notes (Optional)</Label>
+            <Textarea
+              id="notes"
+              value={expenseForm.notes}
+              onChange={(e) => setExpenseForm(prev => ({ ...prev, notes: e.target.value }))}
+              placeholder="Additional details, invoice numbers, etc."
+              rows={3}
+              data-testid="input-notes"
+            />
+          </div>
+        </div>
+      </FormModal>
+
+      {/* Edit Expense Modal */}
+      <FormModal
+        isOpen={isEditModalOpen}
+        onClose={() => { setIsEditModalOpen(false); setEditingExpense(null); }}
+        title="Edit Expense"
+        description="Edit this expense record"
+        onSubmit={handleEditExpense}
+        submitLabel="Save Changes"
+        isLoading={editExpenseMutation.isPending}
         submitDisabled={!isFormValid}
       >
         <div className="space-y-4">

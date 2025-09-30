@@ -23,8 +23,11 @@ interface DataTableProps {
   onAdd?: () => void;
   onEdit?: (row: TableRow) => void;
   onDelete?: (row: TableRow) => void;
+  deletingIds?: Array<number | string>;
   addLabel?: string;
   isLoading?: boolean;
+  loading?: boolean; // alias
+  emptyMessage?: string;
 }
 
 export default function DataTable({
@@ -35,8 +38,11 @@ export default function DataTable({
   onAdd,
   onEdit,
   onDelete,
+  deletingIds = [],
   addLabel = "Add New",
-  isLoading = false
+  isLoading = false,
+  loading = false,
+  emptyMessage = "No data found",
 }: DataTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{
@@ -136,7 +142,7 @@ export default function DataTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {(isLoading || loading) ? (
               <TableRow>
                 <TableCell colSpan={columns.length + (onEdit || onDelete ? 1 : 0)}>
                   <div className="text-center py-8 text-muted-foreground">
@@ -148,7 +154,7 @@ export default function DataTable({
               <TableRow>
                 <TableCell colSpan={columns.length + (onEdit || onDelete ? 1 : 0)}>
                   <div className="text-center py-8 text-muted-foreground">
-                    No data found
+                    {emptyMessage}
                   </div>
                 </TableCell>
               </TableRow>
@@ -179,6 +185,7 @@ export default function DataTable({
                             variant="outline"
                             size="sm"
                             onClick={() => onDelete(row)}
+                            disabled={deletingIds.includes(row.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

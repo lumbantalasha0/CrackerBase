@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Package, Plus, TrendingUp, AlertTriangle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import Badge from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/queryClient";
 
@@ -22,7 +22,7 @@ const inventoryColumns: TableColumn[] = [
     key: 'type',
     label: 'Type',
     render: (value) => (
-      <Badge variant={value === 'addition' ? 'default' : 'secondary'}>
+      <Badge variant={"default" as any}>
         {value === 'addition' ? 'Stock In' : 'Stock Out'}
       </Badge>
     )
@@ -60,12 +60,12 @@ export default function Inventory() {
   const { toast } = useToast();
 
   // Fetch inventory movements
-  const { data: inventoryData = [], isLoading, refetch } = useQuery({
+    const { data: inventoryData = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: ['/api/inventory']
   });
 
   // Fetch current stock
-  const { data: stockData } = useQuery({
+    const { data: stockData } = useQuery<any>({
     queryKey: ['/api/inventory/stock']
   });
 

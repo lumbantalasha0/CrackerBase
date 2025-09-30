@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import routes from "./routes";
+import emailExportRouter from "./emailExport";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -10,6 +11,10 @@ app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  // Log every incoming request for debugging API routing issues
+  // eslint-disable-next-line no-console
+  console.log(`REQ ${req.method} ${req.path} (content-type: ${req.headers['content-type'] || ''})`);
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
@@ -39,6 +44,7 @@ app.use((req, res, next) => {
 (async () => {
   // Add API routes
   app.use(routes);
+  app.use(emailExportRouter);
   
   const server = (await import("http")).createServer(app);
 

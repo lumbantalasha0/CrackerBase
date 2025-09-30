@@ -7,6 +7,13 @@ import {
   type Ingredient, type InsertIngredient,
   type Setting
 } from "@shared/schema";
+import fs from "fs";
+import path from "path";
+import { promisify } from "util";
+import { fileURLToPath } from "url";
+const writeFile = promisify(fs.writeFile);
+const readFile = promisify(fs.readFile);
+const mkdir = promisify(fs.mkdir);
 
 // Storage interface for all business entities
 export interface IStorage {
@@ -74,8 +81,99 @@ export class MemStorage implements IStorage {
   private nextExpenseId = 1;
   private nextIngredientId = 1;
 
+  // file persistence
+  private dataDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'data');
+  private dataFile = path.join(this.dataDir, 'storage.json');
+
   constructor() {
-    this.initializeDefaultData();
+    // attempt to load persisted data; if none exists, initialize defaults and persist
+    this.loadFromDisk().then((loaded) => {
+      if (!loaded) {
+        this.initializeDefaultData();
+        // best-effort persist
+        this.saveToDisk().catch(() => {});
+      }
+    }).catch(() => {
+      // fallback to defaults on any read error
+      this.initializeDefaultData();
+      this.saveToDisk().catch(() => {});
+    });
+  }
+
+  private async ensureDataDir() {
+    try {
+      await mkdir(this.dataDir, { recursive: true });
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  private async saveToDisk() {
+    try {
+      await this.ensureDataDir();
+      const payload = {
+        nextIds: {
+          nextCustomerId: this.nextCustomerId,
+          nextInventoryId: this.nextInventoryId,
+          nextSaleId: this.nextSaleId,
+          nextExpenseCategoryId: this.nextExpenseCategoryId,
+          nextExpenseId: this.nextExpenseId,
+          nextIngredientId: this.nextIngredientId,
+        },
+        customers: Array.from(this.customers.values()),
+        inventoryMovements: Array.from(this.inventoryMovements.values()),
+        sales: Array.from(this.sales.values()),
+        expenseCategories: Array.from(this.expenseCategories.values()),
+        expenses: Array.from(this.expenses.values()),
+        ingredients: Array.from(this.ingredients.values()),
+        settings: Array.from(this.settings.entries()),
+      };
+      await writeFile(this.dataFile, JSON.stringify(payload, null, 2), 'utf8');
+    } catch (e) {
+      // swallow write errors but log
+      // console.error('Failed to save storage to disk', e);
+    }
+  }
+
+  private async loadFromDisk(): Promise<boolean> {
+    try {
+      const content = await readFile(this.dataFile, 'utf8');
+      const parsed = JSON.parse(content);
+      if (parsed && typeof parsed === 'object') {
+        const ids = parsed.nextIds || {};
+        this.nextCustomerId = ids.nextCustomerId ?? this.nextCustomerId;
+        this.nextInventoryId = ids.nextInventoryId ?? this.nextInventoryId;
+        this.nextSaleId = ids.nextSaleId ?? this.nextSaleId;
+        this.nextExpenseCategoryId = ids.nextExpenseCategoryId ?? this.nextExpenseCategoryId;
+        this.nextExpenseId = ids.nextExpenseId ?? this.nextExpenseId;
+        this.nextIngredientId = ids.nextIngredientId ?? this.nextIngredientId;
+
+        const loadArrayToMap = (arr: any[] = [], map: Map<number, any>, key = 'id') => {
+          for (const item of arr) {
+            if (item && item[key] !== undefined) {
+              map.set(item[key], item);
+            }
+          }
+        };
+
+        loadArrayToMap(parsed.customers, this.customers);
+        loadArrayToMap(parsed.inventoryMovements, this.inventoryMovements);
+        loadArrayToMap(parsed.sales, this.sales);
+        loadArrayToMap(parsed.expenseCategories, this.expenseCategories);
+        loadArrayToMap(parsed.expenses, this.expenses);
+        loadArrayToMap(parsed.ingredients, this.ingredients);
+
+        if (Array.isArray(parsed.settings)) {
+          for (const [k, v] of parsed.settings) {
+            this.settings.set(k, v);
+          }
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
   }
 
   private initializeDefaultData() {
@@ -120,6 +218,8 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.customers.set(id, newCustomer);
+    // persist
+    this.saveToDisk().catch(() => {});
     return newCustomer;
   }
 
@@ -129,11 +229,15 @@ export class MemStorage implements IStorage {
     
     const updated = { ...existing, ...customer };
     this.customers.set(id, updated);
+    // persist
+    this.saveToDisk().catch(() => {});
     return updated;
   }
 
   async deleteCustomer(id: number): Promise<boolean> {
-    return this.customers.delete(id);
+    const ok = this.customers.delete(id);
+    this.saveToDisk().catch(() => {});
+    return ok;
   }
 
   // Inventory
@@ -165,6 +269,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.inventoryMovements.set(id, newMovement);
+    this.saveToDisk().catch(() => {});
     return newMovement;
   }
 
@@ -182,11 +287,14 @@ export class MemStorage implements IStorage {
     
     const updated = { ...existing, ...movement };
     this.inventoryMovements.set(id, updated);
+    this.saveToDisk().catch(() => {});
     return updated;
   }
 
   async deleteInventoryMovement(id: number): Promise<boolean> {
-    return this.inventoryMovements.delete(id);
+    const ok = this.inventoryMovements.delete(id);
+    this.saveToDisk().catch(() => {});
+    return ok;
   }
 
   // Sales
@@ -221,6 +329,7 @@ export class MemStorage implements IStorage {
       quantity: sale.quantity,
       note: `Sale to ${sale.customerName || 'Customer'}`,
     });
+    this.saveToDisk().catch(() => {});
     
     return newSale;
   }
@@ -245,11 +354,14 @@ export class MemStorage implements IStorage {
     }
     
     this.sales.set(id, updated);
+    this.saveToDisk().catch(() => {});
     return updated;
   }
 
   async deleteSale(id: number): Promise<boolean> {
-    return this.sales.delete(id);
+    const ok = this.sales.delete(id);
+    this.saveToDisk().catch(() => {});
+    return ok;
   }
 
   // Expense Categories
@@ -269,6 +381,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.expenseCategories.set(id, newCategory);
+    this.saveToDisk().catch(() => {});
     return newCategory;
   }
 
@@ -278,11 +391,14 @@ export class MemStorage implements IStorage {
     
     const updated = { ...existing, ...category };
     this.expenseCategories.set(id, updated);
+    this.saveToDisk().catch(() => {});
     return updated;
   }
 
   async deleteExpenseCategory(id: number): Promise<boolean> {
-    return this.expenseCategories.delete(id);
+    const ok = this.expenseCategories.delete(id);
+    this.saveToDisk().catch(() => {});
+    return ok;
   }
 
   // Expenses
@@ -308,6 +424,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.expenses.set(id, newExpense);
+    this.saveToDisk().catch(() => {});
     return newExpense;
   }
 
@@ -326,11 +443,14 @@ export class MemStorage implements IStorage {
     }
     
     this.expenses.set(id, updated);
+    this.saveToDisk().catch(() => {});
     return updated;
   }
 
   async deleteExpense(id: number): Promise<boolean> {
-    return this.expenses.delete(id);
+    const ok = this.expenses.delete(id);
+    this.saveToDisk().catch(() => {});
+    return ok;
   }
 
   // Ingredients
@@ -354,6 +474,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.ingredients.set(id, newIngredient);
+    this.saveToDisk().catch(() => {});
     return newIngredient;
   }
 
@@ -370,11 +491,14 @@ export class MemStorage implements IStorage {
     }
     
     this.ingredients.set(id, updated);
+    this.saveToDisk().catch(() => {});
     return updated;
   }
 
   async deleteIngredient(id: number): Promise<boolean> {
-    return this.ingredients.delete(id);
+    const ok = this.ingredients.delete(id);
+    this.saveToDisk().catch(() => {});
+    return ok;
   }
 
   // Settings
@@ -384,6 +508,7 @@ export class MemStorage implements IStorage {
 
   async setSetting(key: string, value: string): Promise<void> {
     this.settings.set(key, value);
+    this.saveToDisk().catch(() => {});
   }
 }
 

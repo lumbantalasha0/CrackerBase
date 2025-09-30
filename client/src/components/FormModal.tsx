@@ -18,6 +18,8 @@ interface FormModalProps {
   submitLabel?: string;
   submitDisabled?: boolean;
   cancelLabel?: string;
+  isLoading?: boolean;
+  isSubmitting?: boolean;
   children: ReactNode;
 }
 
@@ -29,6 +31,8 @@ export default function FormModal({
   onSubmit,
   submitLabel = "Submit",
   submitDisabled = false,
+  isLoading = false,
+  isSubmitting = false,
   cancelLabel = "Cancel",
   children,
 }: FormModalProps) {
@@ -62,9 +66,9 @@ export default function FormModal({
             </Button>
             <Button
               type="submit"
-              disabled={submitDisabled}
+              disabled={submitDisabled || isLoading || isSubmitting}
             >
-              {submitLabel}
+              {isLoading || isSubmitting ? "Processing..." : submitLabel}
             </Button>
           </DialogFooter>
         </form>

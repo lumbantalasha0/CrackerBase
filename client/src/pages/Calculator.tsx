@@ -1,20 +1,14 @@
 import { useState } from "react";
+import { useIngredients } from "@/hooks/useIngredients";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Calculator as CalculatorIcon, Package, Info } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import Badge from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// Mock ingredient ratios - todo: remove mock functionality
-const ingredientRatios = {
-  salt: 0.02,      // 20g per kg flour
-  sugar: 0.05,     // 50g per kg flour  
-  oil: 0.15,       // 150ml per kg flour
-  baking_powder: 0.01, // 10g per kg flour
-  water: 0.4       // 400ml per kg flour
-};
+
 
 interface CalculationResult {
   flourKg: number;
@@ -22,9 +16,11 @@ interface CalculationResult {
 }
 
 export default function Calculator() {
+
   const [flourAmount, setFlourAmount] = useState("");
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [ingredients] = useIngredients();
 
   const handleCalculate = async () => {
     const amount = parseFloat(flourAmount);
@@ -36,19 +32,16 @@ export default function Calculator() {
     
     // Mock calculation delay
     setTimeout(() => {
-      const ingredients: Record<string, string> = {};
-      
-      Object.entries(ingredientRatios).forEach(([ingredient, ratio]) => {
-        const calculatedAmount = amount * ratio;
-        const unit = ['oil', 'water'].includes(ingredient) ? 'ml' : 'g';
-        ingredients[ingredient.replace('_', ' ')] = `${calculatedAmount.toFixed(1)}${unit}`;
+      const resultIngredients: Record<string, string> = {};
+      ingredients.forEach((ingredient: { name: string; multiplier: number }) => {
+        const calculatedAmount = amount * ingredient.multiplier;
+        const unit = ["Oil", "Water"].includes(ingredient.name) ? "ml" : "g";
+        resultIngredients[ingredient.name] = `${calculatedAmount.toFixed(1)}${unit}`;
       });
-
       setResult({
         flourKg: amount,
-        ingredients
+        ingredients: resultIngredients
       });
-      
       setIsCalculating(false);
     }, 800);
   };
@@ -134,14 +127,13 @@ export default function Calculator() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {Object.entries(ingredientRatios).map(([ingredient, ratio]) => {
-                const unit = ['oil', 'water'].includes(ingredient) ? 'ml' : 'g';
-                const amount = (ratio * 1000).toFixed(0);
-                
+              {ingredients.map((ingredient: { name: string; multiplier: number }) => {
+                const unit = ["Oil", "Water"].includes(ingredient.name) ? "ml" : "g";
+                const amount = (ingredient.multiplier * 1000).toFixed(0);
                 return (
-                  <div key={ingredient} className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                  <div key={ingredient.name} className="flex justify-between items-center p-3 bg-muted rounded-lg">
                     <span className="font-medium capitalize">
-                      {ingredient.replace('_', ' ')}
+                      {ingredient.name}
                     </span>
                     <Badge variant="outline">
                       {amount}{unit}

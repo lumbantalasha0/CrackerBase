@@ -98,11 +98,23 @@ router.get("/api/sales", async (req, res) => {
 
 router.post("/api/sales", async (req, res) => {
   try {
-    const validatedData = insertSaleSchema.parse(req.body);
+    const body: any = { ...req.body };
+    // debug: log incoming payload to troubleshoot occasional validation failures
+    // eslint-disable-next-line no-console
+    console.log('POST /api/sales body:', JSON.stringify(body));
+    // coerce numeric fields if sent as strings
+  if (body.quantity !== undefined) body.quantity = Number(body.quantity);
+  if (body.pricePerUnit !== undefined) body.pricePerUnit = Number(body.pricePerUnit);
+  // normalize customerId: treat null as undefined so z.number().optional() accepts missing value
+  if (body.customerId === null) delete body.customerId;
+  else if (body.customerId !== undefined) body.customerId = Number(body.customerId);
+    const validatedData = insertSaleSchema.parse(body);
     const sale = await storage.createSale(validatedData);
     res.status(201).json(sale);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      // eslint-disable-next-line no-console
+      console.error('Sale validation error:', JSON.stringify(error.errors, null, 2));
       res.status(400).json({ error: "Validation failed", details: error.errors });
     } else {
       console.error("Error creating sale:", error);
@@ -114,7 +126,11 @@ router.post("/api/sales", async (req, res) => {
 router.put("/api/sales/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const validatedData = insertSaleSchema.partial().parse(req.body);
+    const body: any = { ...req.body };
+    if (body.quantity !== undefined) body.quantity = Number(body.quantity);
+    if (body.pricePerUnit !== undefined) body.pricePerUnit = Number(body.pricePerUnit);
+    if (body.customerId !== undefined) body.customerId = body.customerId === null ? null : Number(body.customerId);
+    const validatedData = insertSaleSchema.partial().parse(body);
     const sale = await storage.updateSale(id, validatedData);
     
     if (!sale) {
@@ -264,9 +280,85 @@ router.get("/api/expenses", async (req, res) => {
   }
 });
 
+// Create expense from units (helper endpoint) - computes amount = units * 2.34
+router.post('/api/expenses/units', async (req, res) => {
+  try {
+    const { categoryId, units, description, notes } = req.body as any;
+    const u = Number(units || 0);
+    const amount = Number((u * 2.34).toFixed(2));
+    const payload = {
+      categoryId: categoryId ?? null,
+      amount,
+      description: description || 'Units expense',
+      notes: notes ? String(notes) : `units:${u}`,
+      status: 'approved'
+    };
+    const validated = insertExpenseSchema.parse(payload);
+    const expense = await storage.createExpense(validated);
+    res.status(201).json(expense);
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation failed', details: e.errors });
+    } else {
+      console.error('Error creating units expense', e);
+      res.status(500).json({ error: 'Failed to create expense' });
+    }
+  }
+});
+
 router.post("/api/expenses", async (req, res) => {
   try {
-    const validatedData = insertExpenseSchema.parse(req.body);
+    // Support special handling for unit-based expenses where client may send { units }
+    const body: any = { ...req.body };
+    try {
+      // If client included `units` and didn't include `amount`, compute amount using default rate.
+      // This makes the flow robust even if category naming differs or client omits amount.
+      if (body.units !== undefined && (body.amount === undefined || body.amount === null || body.amount === '')) {
+        const units = Number(body.units) || 0;
+        // 1 Unit = ZMW 2.34 (business rule)
+        body.amount = Number((units * 2.34).toFixed(2));
+        body.notes = (body.notes ? body.notes + ' ' : '') + `units:${units}`;
+      } else {
+        // legacy: also check specific category name and compute if necessary
+        try {
+          const categories = await storage.getExpenseCategories();
+          const cat = categories.find((c: any) => c.id === body.categoryId);
+          if (cat && typeof cat.name === 'string' && cat.name.toLowerCase() === 'electricity units' && body.units !== undefined) {
+            const units = Number(body.units) || 0;
+            body.amount = Number((units * 2.34).toFixed(2));
+            body.notes = (body.notes ? body.notes + ' ' : '') + `units:${units}`;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    } catch (e) {
+      // ignore and proceed with validation
+    }
+
+    // debug: log body to troubleshoot unit->amount conversion issues
+    // eslint-disable-next-line no-console
+    console.log('Creating expense, body before validation:', JSON.stringify(body));
+    let validatedData;
+    try {
+      validatedData = insertExpenseSchema.parse(body);
+    } catch (err) {
+      // If validation failed because amount was missing, but units are provided, compute amount and retry
+      if (err instanceof z.ZodError) {
+        const hasAmountIssue = err.errors.some(e => e.path?.[0] === 'amount');
+        if (hasAmountIssue && body.units !== undefined) {
+          try {
+            const units = Number(body.units) || 0;
+            body.amount = Number((units * 2.34).toFixed(2));
+            body.notes = (body.notes ? body.notes + ' ' : '') + `units:${units}`;
+            validatedData = insertExpenseSchema.parse(body);
+          } catch (e2) {
+            // fallthrough to rethrow original
+          }
+        }
+      }
+      if (!validatedData) throw err;
+    }
     const expense = await storage.createExpense(validatedData);
     res.status(201).json(expense);
   } catch (error) {
@@ -417,6 +509,9 @@ router.get("/api/analytics/dashboard", async (req, res) => {
       netProfit,
       currentStock,
       totalCustomers: customers.length,
+      // aliases expected by client
+      stockRemaining: currentStock,
+      avgOrderValue: sales.length > 0 ? totalSales / sales.length : 0,
       monthlySales: monthlyTotalSales,
       monthlyExpenses: monthlyTotalExpenses,
       monthlyProfit: monthlyTotalSales - monthlyTotalExpenses,
@@ -480,4 +575,117 @@ router.get("/api/analytics/recent-activity", async (req, res) => {
   }
 });
 
+// Top customers (for Reports page)
+router.get('/api/analytics/top-customers', async (req, res) => {
+  try {
+    const sales = await storage.getSales();
+    const customers = await storage.getCustomers();
+
+    // aggregate by customerId
+    const agg: Record<number, { id: number; name: string; purchases: number; total: number }> = {};
+    for (const s of sales) {
+      const cid = s.customerId ?? 0;
+      if (!agg[cid]) agg[cid] = { id: cid, name: (s.customerName || (customers.find(c=>c.id===cid)?.name) || 'Walk-in'), purchases: 0, total: 0 };
+      agg[cid].purchases += 1;
+      agg[cid].total += Number(s.totalPrice || 0);
+    }
+
+    const arr = Object.values(agg).sort((a,b) => b.total - a.total).slice(0,5);
+    res.json(arr);
+  } catch (e) {
+    console.error('Error computing top customers', e);
+    res.status(500).json({ error: 'Failed to compute top customers' });
+  }
+});
+
 export default router;
+
+// Additional analytics endpoints
+router.get('/api/analytics/sales-over-time', async (req, res) => {
+  try {
+    const sales = await storage.getSales();
+    // Return data grouped by day for last 30 days
+    const now = new Date();
+    const days = 30;
+    const out: any[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      const dateKey = d.toISOString().slice(0, 10);
+      const daySales = sales.filter(s => (new Date(s.createdAt)).toISOString().slice(0,10) === dateKey);
+      const total = daySales.reduce((sum, s) => sum + Number(s.totalPrice), 0);
+      out.push({ date: dateKey, total, count: daySales.length });
+    }
+    res.json(out);
+  } catch (e) {
+    console.error('Error sales-over-time', e);
+    res.status(500).json({ error: 'Failed to compute sales over time' });
+  }
+});
+
+router.get('/api/analytics/production-over-time', async (req, res) => {
+  try {
+    const movements = await storage.getInventoryMovements();
+    const now = new Date();
+    const days = 30;
+    const out: any[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      const dateKey = d.toISOString().slice(0, 10);
+      const dayMovements = movements.filter(m => (new Date(m.createdAt)).toISOString().slice(0,10) === dateKey);
+      const produced = dayMovements.filter(m => m.type === 'addition').reduce((s, m) => s + m.quantity, 0);
+      const sold = dayMovements.filter(m => m.type === 'sale').reduce((s, m) => s + m.quantity, 0);
+      out.push({ date: dateKey, produced, sold });
+    }
+    res.json(out);
+  } catch (e) {
+    console.error('Error production-over-time', e);
+    res.status(500).json({ error: 'Failed to compute production over time' });
+  }
+});
+
+router.get('/api/analytics/aggregates', async (req, res) => {
+  try {
+    const [sales, expenses] = await Promise.all([storage.getSales(), storage.getExpenses()]);
+    const now = new Date();
+
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(startOfDay);
+    startOfWeek.setDate(startOfDay.getDate() - startOfDay.getDay());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const daySales = sales.filter(s => new Date(s.createdAt) >= startOfDay);
+    const weekSales = sales.filter(s => new Date(s.createdAt) >= startOfWeek);
+    const monthSales = sales.filter(s => new Date(s.createdAt) >= startOfMonth);
+
+    const dayExpenses = expenses.filter(e => new Date(e.createdAt) >= startOfDay);
+    const weekExpenses = expenses.filter(e => new Date(e.createdAt) >= startOfWeek);
+    const monthExpenses = expenses.filter(e => new Date(e.createdAt) >= startOfMonth);
+
+    const sum = (arr: any[], key: string) => arr.reduce((s, x) => s + Number(x[key] || 0), 0);
+
+    res.json({
+      dailyProfit: sum(daySales, 'totalPrice') - sum(dayExpenses, 'amount'),
+      weeklyProfit: sum(weekSales, 'totalPrice') - sum(weekExpenses, 'amount'),
+      monthlyProfit: sum(monthSales, 'totalPrice') - sum(monthExpenses, 'amount'),
+      lastSaleTime: sales.length ? sales[0].createdAt : null,
+      lastExpenseTime: expenses.length ? expenses[0].createdAt : null
+    });
+  } catch (e) {
+    console.error('Error aggregates', e);
+    res.status(500).json({ error: 'Failed to compute aggregates' });
+  }
+});
+
+// Prediction endpoint (simple, runs in-process)
+import predictTrends from './predict/trends';
+
+router.post('/api/v1/predict/trends', async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const result = await predictTrends(payload);
+    res.status(200).json(result.predictions || result);
+  } catch (e) {
+    console.error('Error running predict/trends', e);
+    res.status(500).json({ error: 'Failed to run predictions' });
+  }
+});

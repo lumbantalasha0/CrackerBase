@@ -5,7 +5,7 @@ import DataTable, { TableColumn, TableRow } from "@/components/DataTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Package, DollarSign, Receipt, TrendingUp, Clock, AlertTriangle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import Badge from "@/components/ui/badge";
 
 // Utility function to format time
 const formatTimeAgo = (dateString: string) => {
@@ -35,7 +35,7 @@ const activityColumns: TableColumn[] = [
         production: 'secondary',
         expense: 'outline'
       };
-      return <Badge variant={variants[value as keyof typeof variants]}>{value}</Badge>;
+  return <Badge variant={variants[value as keyof typeof variants] as any}>{value}</Badge>;
     }
   },
   {
@@ -68,12 +68,12 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
 
   // Fetch dashboard analytics
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery<any>({
     queryKey: ['/api/analytics/dashboard']
   });
 
   // Fetch recent activity
-  const { data: recentActivity = [], isLoading: activityLoading } = useQuery({
+  const { data: recentActivity = [], isLoading: activityLoading } = useQuery<any[]>({
     queryKey: ['/api/analytics/recent-activity']
   });
 

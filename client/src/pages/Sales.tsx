@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DollarSign, TrendingUp, Users, Calendar } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import Badge from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/queryClient";
 
@@ -61,6 +61,8 @@ interface SaleForm {
 
 export default function Sales() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingSale, setEditingSale] = useState<any>(null);
   const [saleForm, setSaleForm] = useState<SaleForm>({ 
     customerId: '', 
     newCustomerName: '',
@@ -70,12 +72,12 @@ export default function Sales() {
   const { toast } = useToast();
 
   // Fetch sales data
-  const { data: salesData = [], isLoading: salesLoading, refetch } = useQuery({
+  const { data: salesData = [], isLoading: salesLoading, refetch } = useQuery<any[]>({
     queryKey: ['/api/sales']
   });
 
   // Fetch customers
-  const { data: customersData = [] } = useQuery({
+  const { data: customersData = [] } = useQuery<any[]>({
     queryKey: ['/api/customers']
   });
 
@@ -153,8 +155,49 @@ export default function Sales() {
   };
 
   const handleEdit = (row: TableRow) => {
-    console.log('Edit sale:', row);
-    // TODO: implement edit functionality
+    setEditingSale(row);
+    setSaleForm({
+      customerId: row.customerId ? row.customerId.toString() : '',
+      newCustomerName: row.customerId ? '' : row.customer,
+      quantity: row.quantity?.toString() ?? '',
+      pricePerUnit: row.pricePerUnit?.toString() ?? ''
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const editSaleMutation = useMutation({
+    mutationFn: (data: any) => {
+      return apiRequest('PUT', `/api/sales/${editingSale?.id}`, data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Sale Updated",
+        description: `Sale record has been updated.`,
+      });
+      setSaleForm({ customerId: '', newCustomerName: '', quantity: '', pricePerUnit: '' });
+      setEditingSale(null);
+      setIsEditModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/sales'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/analytics/dashboard'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update sale",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleEditSale = () => {
+    if (!isFormValid) return;
+    const saleData = {
+      customerId: saleForm.customerId ? parseInt(saleForm.customerId) : null,
+      customerName: saleForm.newCustomerName || (customersData.find((c: any) => c.id === parseInt(saleForm.customerId))?.name),
+      quantity: parseInt(saleForm.quantity),
+      pricePerUnit: parseFloat(saleForm.pricePerUnit)
+    };
+    editSaleMutation.mutate(saleData);
   };
 
   const handleDelete = (row: TableRow) => {
@@ -244,6 +287,90 @@ export default function Sales() {
         onSubmit={handleAddSale}
         submitLabel="Record Sale"
         isSubmitting={addSaleMutation.isPending}
+        submitDisabled={!isFormValid}
+      >
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="customer">Customer</Label>
+            <Select value={saleForm.customerId} onValueChange={(value) => 
+              setSaleForm(prev => ({ ...prev, customerId: value, newCustomerName: '' }))
+            }>
+              <SelectTrigger data-testid="select-customer">
+                <SelectValue placeholder="Select existing customer" />
+              </SelectTrigger>
+              <SelectContent>
+                {customersData.map((customer: any) => (
+                  <SelectItem key={customer.id} value={customer.id.toString()}>
+                    {customer.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="newCustomer">Or add new customer</Label>
+            <Input
+              id="newCustomer"
+              value={saleForm.newCustomerName}
+              onChange={(e) => setSaleForm(prev => ({ 
+                ...prev, 
+                newCustomerName: e.target.value, 
+                customerId: '' 
+              }))}
+              placeholder="New customer name"
+              data-testid="input-new-customer"
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="quantity">Quantity (pieces)</Label>
+              <Input
+                id="quantity"
+                type="number"
+                value={saleForm.quantity}
+                onChange={(e) => setSaleForm(prev => ({ ...prev, quantity: e.target.value }))}
+                placeholder="0"
+                min="1"
+                data-testid="input-quantity"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="pricePerUnit">Price per Unit (ZMW)</Label>
+              <Input
+                id="pricePerUnit"
+                type="number"
+                step="0.01"
+                value={saleForm.pricePerUnit}
+                onChange={(e) => setSaleForm(prev => ({ ...prev, pricePerUnit: e.target.value }))}
+                placeholder="0.00"
+                min="0.01"
+                data-testid="input-price"
+              />
+            </div>
+          </div>
+
+          {saleForm.quantity && saleForm.pricePerUnit && (
+            <div className="p-3 bg-muted rounded-md">
+              <p className="text-sm font-medium">
+                Total: ZMW {(parseFloat(saleForm.quantity) * parseFloat(saleForm.pricePerUnit)).toLocaleString()}
+              </p>
+            </div>
+          )}
+        </div>
+      </FormModal>
+
+      {/* Edit Sale Modal */}
+      <FormModal
+        isOpen={isEditModalOpen}
+        onClose={() => { setIsEditModalOpen(false); setEditingSale(null); }}
+        title="Edit Sale"
+        description="Edit this sale record"
+        onSubmit={handleEditSale}
+        submitLabel="Save Changes"
+        isSubmitting={editSaleMutation.isPending}
         submitDisabled={!isFormValid}
       >
         <div className="space-y-4">

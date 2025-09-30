@@ -11,12 +11,14 @@ interface StatsCardProps {
   icon?: LucideIcon;
   actionLabel?: string;
   onAction?: () => void;
-  variant?: "default" | "success" | "destructive" | "warning";
+  variant?: "default" | "success" | "destructive" | "warning" | "secondary";
   className?: string;
+  loading?: boolean;
 }
 
 const variantStyles = {
   default: "border-border",
+  secondary: "border-border bg-secondary-50 dark:bg-secondary-950",
   success: "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950",
   destructive: "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950",
   warning: "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950",
@@ -24,12 +26,13 @@ const variantStyles = {
 
 const iconVariantStyles = {
   default: "text-muted-foreground",
+  secondary: "text-secondary-600 dark:text-secondary-400",
   success: "text-green-600 dark:text-green-400",
   destructive: "text-red-600 dark:text-red-400", 
   warning: "text-yellow-600 dark:text-yellow-400",
 };
 
-export default function StatsCard({
+export function StatsCard({
   title,
   value,
   subtitle,
@@ -38,6 +41,7 @@ export default function StatsCard({
   onAction,
   variant = "default",
   className,
+  loading = false,
 }: StatsCardProps) {
   return (
     <Card className={cn(variantStyles[variant], className)}>
@@ -68,3 +72,5 @@ export default function StatsCard({
     </Card>
   );
 }
+
+export default StatsCard;
