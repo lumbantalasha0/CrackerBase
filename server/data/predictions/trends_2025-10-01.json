@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-09-30T21:01:26.504Z",
+  "generatedAt": "2025-10-01T18:22:46.107Z",
   "params": {
     "headers": {
       "Content-Type": "application/json"
@@ -7,10 +7,6 @@
     "body": "{\"horizon\":14,\"method\":\"auto\"}"
   },
   "series": [
-    {
-      "date": "2024-09-30",
-      "value": 0
-    },
     {
       "date": "2024-10-01",
       "value": 0
@@ -1470,18 +1466,13 @@
     {
       "date": "2025-09-30",
       "value": 0
+    },
+    {
+      "date": "2025-10-01",
+      "value": 0
     }
   ],
   "predictions": [
-    {
-      "date": "2025-10-01",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
-      "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
-    },
     {
       "date": "2025-10-02",
       "pred": 0,
@@ -1736,6 +1727,15 @@
     },
     {
       "date": "2025-10-30",
+      "pred": 0,
+      "lower95": 0,
+      "upper95": 0,
+      "model": "fallback_moving_average",
+      "reason": "insufficient_history: only 0 non-empty days (<90)",
+      "recommended_action": "predicted decrease -100% - recommend scale-down"
+    },
+    {
+      "date": "2025-10-31",
       "pred": 0,
       "lower95": 0,
       "upper95": 0,

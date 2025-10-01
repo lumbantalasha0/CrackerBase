@@ -118,8 +118,9 @@ export default function DataTable({
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
-        <Table>
+      <div className="rounded-md border overflow-x-auto">
+        <div className="min-w-[600px]">
+          <Table>
           <TableHeader>
             <TableRow>
               {columns.map((column) => (
@@ -197,7 +198,8 @@ export default function DataTable({
               ))
             )}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
       </div>
     </div>
   );

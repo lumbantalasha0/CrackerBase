@@ -1,13 +1,30 @@
 {
   "nextIds": {
-    "nextCustomerId": 11,
-    "nextInventoryId": 14,
-    "nextSaleId": 9,
+    "nextCustomerId": 13,
+    "nextInventoryId": 17,
+    "nextSaleId": 11,
     "nextExpenseCategoryId": 8,
-    "nextExpenseId": 15,
+    "nextExpenseId": 17,
     "nextIngredientId": 6
   },
-  "customers": [],
+  "customers": [
+    {
+      "id": 11,
+      "name": "MIGRATION TEST",
+      "phone": null,
+      "businessName": null,
+      "location": null,
+      "createdAt": "2025-10-01T17:42:28.423Z"
+    },
+    {
+      "id": 12,
+      "name": "MIGRATION TEST",
+      "phone": null,
+      "businessName": null,
+      "location": null,
+      "createdAt": "2025-10-01T17:51:35.953Z"
+    }
+  ],
   "inventoryMovements": [],
   "sales": [],
   "expenseCategories": [],

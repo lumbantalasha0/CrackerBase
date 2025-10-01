@@ -24,21 +24,35 @@ export default function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-foreground">
-              BEMACHO Crackers Manager
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Professional business management system
-            </p>
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <h1 className="text-2xl font-bold text-foreground">BEMACHO Crackers</h1>
+            <p className="hidden sm:inline text-sm text-muted-foreground">Professional business management</p>
           </div>
+
+          {/* Mobile quick nav (visible on small screens) */}
+          <nav className="sm:hidden">
+            <ul className="flex items-center space-x-2">
+              {navigationItems.slice(0,4).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.href}>
+                    <Link href={item.href}>
+                      <a className="p-2 rounded-md text-muted-foreground hover:text-foreground">
+                        <Icon className="h-5 w-5" />
+                      </a>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
         </div>
       </header>
 
       <div className="flex">
-        {/* Sidebar */}
-        <aside className="w-64 bg-card border-r border-border min-h-[calc(100vh-81px)]">
+        {/* Sidebar (hidden on small screens) */}
+        <aside className="hidden sm:block w-64 bg-card border-r border-border min-h-[calc(100vh-81px)]">
           <nav className="p-4">
             <ul className="space-y-2">
               {navigationItems.map((item) => {
@@ -67,7 +81,7 @@ export default function Layout({ children }: LayoutProps) {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 sm:p-6">
           {children}
         </main>
       </div>

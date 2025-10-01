@@ -106,6 +106,8 @@ export default function Dashboard() {
         </p>
       </div>
 
+  {/* Dashboard content (responsive utilities applied throughout) */}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
