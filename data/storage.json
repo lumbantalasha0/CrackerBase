@@ -1,7 +1,7 @@
 {
   "nextIds": {
     "nextCustomerId": 15,
-    "nextInventoryId": 19,
+    "nextInventoryId": 20,
     "nextSaleId": 12,
     "nextExpenseCategoryId": 8,
     "nextExpenseId": 17,
@@ -17,7 +17,16 @@
       "createdAt": "2025-10-02T11:29:58.750Z"
     }
   ],
-  "inventoryMovements": [],
+  "inventoryMovements": [
+    {
+      "id": 19,
+      "type": "addition",
+      "quantity": 6,
+      "balance": 6,
+      "note": null,
+      "createdAt": "2025-10-02T13:12:18.727Z"
+    }
+  ],
   "sales": [],
   "expenseCategories": [],
   "expenses": [],
