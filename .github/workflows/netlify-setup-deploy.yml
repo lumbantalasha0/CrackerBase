@@ -1,0 +1,85 @@
+name: Netlify: set env, build, deploy, test Firestore
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-and-test:
+    runs-on: ubuntu-latest
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node and pnpm
+        run: |
+          sudo npm i -g pnpm@latest netlify-cli
+
+      - name: Encode service account to base64
+        id: encode_sa
+        run: |
+          if [ -f server/service-account.json ]; then
+            SA_B64=$(base64 --wrap=0 server/service-account.json)
+            echo "sa_b64=$SA_B64" >> $GITHUB_OUTPUT
+          else
+            echo "No service-account.json found in repo at server/service-account.json" >&2
+            exit 1
+          fi
+
+      - name: Set Netlify env FIREBASE_SERVICE_ACCOUNT_B64
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          echo "Setting FIREBASE_SERVICE_ACCOUNT_B64 on Netlify..."
+          netlify env:set FIREBASE_SERVICE_ACCOUNT_B64 "${{ steps.encode_sa.outputs.sa_b64 }}" --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN
+
+      - name: Set USE_FIRESTORE=1 on Netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          netlify env:set USE_FIRESTORE 1 --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN || true
+
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+
+      - name: Build site
+        run: |
+          pnpm run build
+
+      - name: Deploy to Netlify (prod)
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          netlify deploy --prod --dir=dist --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN
+
+      - name: Wait briefly for functions to warm
+        run: sleep 10
+
+      - name: Test debug-firestore write
+        env:
+          SITE_DOMAIN: ${{ secrets.NETLIFY_SITE_DOMAIN || 'bemacho.netlify.app' }}
+        run: |
+          echo "Calling debug-firestore?test=1 on https://$SITE_DOMAIN"
+          set -e
+          RESP=$(curl -sS -m 30 "https://$SITE_DOMAIN/.netlify/functions/debug-firestore?test=1" || true)
+          echo "response: $RESP"
+          if echo "$RESP" | grep -q '"ok":true'; then
+            echo "Debug test succeeded"
+            echo "$RESP" > debug-response.json
+          else
+            echo "Debug test failed; aborting migration"
+            exit 1
+          fi
+
+      - name: Migrate fallback entries into Firestore
+        env:
+          SITE_DOMAIN: ${{ secrets.NETLIFY_SITE_DOMAIN || 'bemacho.netlify.app' }}
+        run: |
+          echo "Calling migrate-fallback on https://$SITE_DOMAIN"
+          curl -sS -X POST "https://$SITE_DOMAIN/.netlify/functions/migrate-fallback" | jq '.' || true
