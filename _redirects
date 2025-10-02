@@ -1,2 +1,3 @@
+ /api/export/email /.netlify/functions/export-email 200
  /api/* /.netlify/functions/:splat 200
 /*    /index.html   200
