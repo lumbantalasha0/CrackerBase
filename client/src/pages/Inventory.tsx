@@ -52,6 +52,8 @@ const inventoryColumns: TableColumn[] = [
 interface StockForm {
   quantity: string;
   note: string;
+  location?: string;
+  phone?: string;
 }
 
 export default function Inventory() {
@@ -79,7 +81,7 @@ export default function Inventory() {
 
   // Add stock mutation
   const addStockMutation = useMutation({
-    mutationFn: (data: { type: string; quantity: number; note?: string }) => {
+    mutationFn: (data: { type: string; quantity: number; note?: string; location?: string; phone?: string }) => {
       return apiRequest('POST', '/api/inventory', data);
     },
     onSuccess: () => {
@@ -132,7 +134,9 @@ export default function Inventory() {
     addStockMutation.mutate({
       type: 'addition',
       quantity: parseInt(stockForm.quantity),
-      note: stockForm.note || undefined
+      note: stockForm.note || undefined,
+      location: stockForm.location || undefined,
+      phone: stockForm.phone || undefined
     });
   };
 
@@ -236,6 +240,27 @@ export default function Inventory() {
               placeholder="Enter quantity"
               min="1"
               data-testid="input-quantity"
+            />
+          </div>
+          <div>
+            <Label htmlFor="location">Location (Optional)</Label>
+            <Input
+              id="location"
+              value={stockForm.location || ''}
+              onChange={(e) => setStockForm(prev => ({ ...prev, location: e.target.value }))}
+              placeholder="e.g., Warehouse A"
+              data-testid="input-location"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="phone">Phone (Optional)</Label>
+            <Input
+              id="phone"
+              value={stockForm.phone || ''}
+              onChange={(e) => setStockForm(prev => ({ ...prev, phone: e.target.value }))}
+              placeholder="Contact phone"
+              data-testid="input-phone"
             />
           </div>
           
