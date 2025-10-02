@@ -63,8 +63,9 @@ jobs:
 
       - name: Test debug-firestore write
         env:
-          SITE_DOMAIN: ${{ secrets.NETLIFY_SITE_DOMAIN || 'bemacho.netlify.app' }}
+          SITE_DOMAIN: ${{ secrets.NETLIFY_SITE_DOMAIN }}
         run: |
+          SITE_DOMAIN=${SITE_DOMAIN:-bemacho.netlify.app}
           echo "Calling debug-firestore?test=1 on https://$SITE_DOMAIN"
           set -e
           RESP=$(curl -sS -m 30 "https://$SITE_DOMAIN/.netlify/functions/debug-firestore?test=1" || true)
@@ -79,7 +80,8 @@ jobs:
 
       - name: Migrate fallback entries into Firestore
         env:
-          SITE_DOMAIN: ${{ secrets.NETLIFY_SITE_DOMAIN || 'bemacho.netlify.app' }}
+          SITE_DOMAIN: ${{ secrets.NETLIFY_SITE_DOMAIN }}
         run: |
+          SITE_DOMAIN=${SITE_DOMAIN:-bemacho.netlify.app}
           echo "Calling migrate-fallback on https://$SITE_DOMAIN"
           curl -sS -X POST "https://$SITE_DOMAIN/.netlify/functions/migrate-fallback" | jq '.' || true
