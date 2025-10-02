@@ -11,8 +11,10 @@ export const handler = async function (event, context) {
         const adminMod = await import('firebase-admin');
         const admin = adminMod.default || adminMod;
         if (!admin.apps || admin.apps.length === 0) {
-          if (!process.env.FIREBASE_SERVICE_ACCOUNT) throw new Error('FIREBASE_SERVICE_ACCOUNT not set');
-          const svc = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+          const raw = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_SERVICE_ACCOUNT_B64;
+          if (!raw) throw new Error('FIREBASE_SERVICE_ACCOUNT not set');
+          let svc;
+          try { svc = JSON.parse(raw); } catch (e) { try { svc = JSON.parse(Buffer.from(raw.trim(), 'base64').toString('utf8')); } catch (e2) { throw new Error('Invalid FIREBASE_SERVICE_ACCOUNT JSON (plain or base64)'); } }
           admin.initializeApp({ credential: admin.credential.cert(svc) });
         }
         const db = admin.firestore();
