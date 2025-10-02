@@ -19,7 +19,7 @@ export const handler = async function (event, context) {
         const ref = await db.collection('customers').add({ name: String(name).trim(), phone: phone ? String(phone).trim() : null, location: location ? String(location).trim() : null, createdAt: new Date().toISOString() });
         const doc = await ref.get();
         return { statusCode: 200, body: JSON.stringify({ id: doc.id, ...doc.data() }) };
-      } catch (err) { console.error('customers_v3 firestore error:', err); return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error' }) }; }
+  } catch (err) { console.error('customers_v3 firestore error:', err); const message = err && err.message ? err.message : String(err); return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error', details: message }) }; }
     }
 
     const saved = { id: Date.now(), name: String(name).trim(), phone: phone ? String(phone).trim() : null, location: location ? String(location).trim() : null, createdAt: new Date().toISOString() };

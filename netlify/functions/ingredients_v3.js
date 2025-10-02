@@ -16,7 +16,7 @@ export const handler = async function (event, context) {
           return { statusCode: 200, body: JSON.stringify(items) };
         }
         return { statusCode: 200, body: JSON.stringify([]) };
-      } catch (err) { console.error('ingredients_v3 GET error:', err); return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error' }) }; }
+  } catch (err) { console.error('ingredients_v3 GET error:', err); const message = err && err.message ? err.message : String(err); return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error', details: message }) }; }
     }
 
     if (event.httpMethod === 'POST') {
@@ -41,7 +41,7 @@ export const handler = async function (event, context) {
         }
         const saved = { id: Date.now(), name: String(name).trim(), multiplier: Number(multiplier), createdAt: new Date().toISOString() };
         return { statusCode: 200, body: JSON.stringify(saved) };
-      } catch (err) { console.error('ingredients_v3 POST error:', err); return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error' }) }; }
+  } catch (err) { console.error('ingredients_v3 POST error:', err); const message = err && err.message ? err.message : String(err); return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error', details: message }) }; }
     }
 
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };

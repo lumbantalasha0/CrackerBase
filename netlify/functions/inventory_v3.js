@@ -30,7 +30,8 @@ export const handler = async function (event, context) {
         return { statusCode: 200, body: JSON.stringify({ id: doc.id, ...doc.data() }) };
       } catch (err) {
         console.error('inventory_v3 firestore error:', err);
-        return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error' }) };
+        const message = err && err.message ? err.message : String(err);
+        return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error', details: message }) };
       }
     }
 
