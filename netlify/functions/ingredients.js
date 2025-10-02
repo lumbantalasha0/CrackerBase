@@ -1,14 +1,28 @@
 // Netlify Function to handle GET /api/ingredients and POST /api/ingredients
-import { storage } from '../../server/storage.js';
 
 export const handler = async function (event, context) {
   try {
     if (event.httpMethod === 'GET') {
       try {
-        const items = await storage.getIngredients();
-        return { statusCode: 200, body: JSON.stringify(items) };
+        if (process.env.USE_FIRESTORE === '1') {
+          const adminMod = await import('firebase-admin');
+          const admin = adminMod.default || adminMod;
+          if (!admin.apps || admin.apps.length === 0) {
+            if (!process.env.FIREBASE_SERVICE_ACCOUNT) throw new Error('FIREBASE_SERVICE_ACCOUNT not set');
+            const svc = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            admin.initializeApp({ credential: admin.credential.cert(svc) });
+          }
+          const db = admin.firestore();
+          const snap = await db.collection('ingredients').orderBy('name').get();
+          const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          return { statusCode: 200, body: JSON.stringify(items) };
+        }
+
+        // fallback to empty list if Firestore not enabled
+        return { statusCode: 200, body: JSON.stringify([]) };
       } catch (err) {
-        return { statusCode: 500, body: JSON.stringify({ error: String(err) }) };
+        console.error('ingredients GET firestore error:', err);
+        return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error' }) };
       }
     }
 
@@ -26,10 +40,26 @@ export const handler = async function (event, context) {
       if (multiplier == null || isNaN(Number(multiplier))) return { statusCode: 400, body: JSON.stringify({ error: 'multiplier must be numeric' }) };
 
       try {
-        const created = await storage.createIngredient({ name: String(name).trim(), multiplier: Number(multiplier), unit: undefined });
-        return { statusCode: 200, body: JSON.stringify(created) };
+        if (process.env.USE_FIRESTORE === '1') {
+          const adminMod = await import('firebase-admin');
+          const admin = adminMod.default || adminMod;
+          if (!admin.apps || admin.apps.length === 0) {
+            if (!process.env.FIREBASE_SERVICE_ACCOUNT) throw new Error('FIREBASE_SERVICE_ACCOUNT not set');
+            const svc = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            admin.initializeApp({ credential: admin.credential.cert(svc) });
+          }
+          const db = admin.firestore();
+          const ref = await db.collection('ingredients').add({ name: String(name).trim(), multiplier: Number(multiplier), unit: 'g', createdAt: new Date().toISOString() });
+          const doc = await ref.get();
+          return { statusCode: 200, body: JSON.stringify({ id: doc.id, ...doc.data() }) };
+        }
+
+        // fallback ephemeral
+        const saved = { id: Date.now(), name: String(name).trim(), multiplier: Number(multiplier), createdAt: new Date().toISOString() };
+        return { statusCode: 200, body: JSON.stringify(saved) };
       } catch (err) {
-        return { statusCode: 500, body: JSON.stringify({ error: String(err) }) };
+        console.error('ingredients POST firestore error:', err);
+        return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error' }) };
       }
     }
 

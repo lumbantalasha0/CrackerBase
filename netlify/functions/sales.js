@@ -1,6 +1,4 @@
 // Netlify Function to handle POST /api/sales
-import { storage } from '../../server/storage.js';
-
 export const handler = async function (event, context) {
   try {
     if (event.httpMethod !== 'POST') {
@@ -27,11 +25,44 @@ export const handler = async function (event, context) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields' }) };
     }
 
+    if (process.env.USE_FIRESTORE === '1') {
+      try {
+        const adminMod = await import('firebase-admin');
+        const admin = adminMod.default || adminMod;
+        if (!admin.apps || admin.apps.length === 0) {
+          if (!process.env.FIREBASE_SERVICE_ACCOUNT) throw new Error('FIREBASE_SERVICE_ACCOUNT not set');
+          const svc = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+          admin.initializeApp({ credential: admin.credential.cert(svc) });
+        }
+        const db = admin.firestore();
+
+        // create sale
+        const ref = await db.collection('sales').add({ customerId: customerId ?? null, customerName: null, quantity: Number(quantity), pricePerUnit: Number(pricePerUnit), totalPrice: (Number(pricePerUnit) * Number(quantity)), status: 'completed', createdAt: new Date().toISOString() });
+        const doc = await ref.get();
+
+        // Also create inventory movement for sale
+        await db.collection('inventoryMovements').add({ type: 'sale', quantity: Number(quantity), note: `Sale to ${customerId ?? 'Customer'}`, createdAt: new Date().toISOString(), balance: null });
+
+        return { statusCode: 200, body: JSON.stringify({ id: doc.id, ...doc.data() }) };
+      } catch (err) {
+        console.error('sales firestore error:', err);
+        return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error' }) };
+      }
+    }
+
+    // fallback ephemeral
     try {
-      const created = await storage.createSale({ customerId: customerId ?? undefined, customerName: undefined, quantity: Number(quantity), pricePerUnit: Number(pricePerUnit), status: undefined });
-      return { statusCode: 200, body: JSON.stringify(created) };
+      const saved = {
+        id: Date.now(),
+        customerId,
+        quantity: Number(quantity),
+        pricePerUnit: Number(pricePerUnit),
+        createdAt: new Date().toISOString(),
+      };
+      return { statusCode: 200, body: JSON.stringify(saved) };
     } catch (err) {
-      return { statusCode: 500, body: JSON.stringify({ error: String(err) }) };
+      console.error('sales fallback error:', err);
+      return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error' }) };
     }
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: String(err) }) };
