@@ -33,7 +33,8 @@ export const handler = async function (event, context) {
         const message = err && err.message ? err.message : String(err);
         const stack = err && err.stack ? err.stack : null;
         // If auth error, fall back to a local /tmp JSON store so UI continues to work
-        if (message && message.includes('UNAUTHENTICATED')) {
+  const unauth = (message && /unauth/i.test(message)) || (stack && /unauth/i.test(stack)) || (message && message.startsWith('16 '));
+  if (unauth) {
           try {
             const fs = await import('fs');
             const path = '/tmp/netlify-fallback.json';

@@ -41,8 +41,9 @@ export const handler = async function (event, context) {
         }
         const saved = { id: Date.now(), name: String(name).trim(), multiplier: Number(multiplier), createdAt: new Date().toISOString() };
         return { statusCode: 200, body: JSON.stringify(saved) };
-      } catch (err) { console.error('ingredients_v3 POST error:', err); const message = err && err.message ? err.message : String(err);
-        if (message && message.includes('UNAUTHENTICATED')) {
+      } catch (err) { console.error('ingredients_v3 POST error:', err); const message = err && err.message ? err.message : String(err); const stack = err && err.stack ? err.stack : null;
+        const unauth = (message && /unauth/i.test(message)) || (stack && /unauth/i.test(stack)) || (message && message.startsWith('16 '));
+        if (unauth) {
           try {
             const fs = await import('fs');
             const path = '/tmp/netlify-fallback.json';
