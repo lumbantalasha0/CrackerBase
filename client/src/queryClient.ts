@@ -12,15 +12,46 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  // Retry wrapper: retry on 503 Service Unavailable with exponential backoff
+  const maxRetries = 3;
+  let attempt = 0;
+  let lastErr: any = null;
 
-  await throwIfResNotOk(res);
-  return res;
+  while (attempt <= maxRetries) {
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: data ? { "Content-Type": "application/json" } : {},
+        body: data ? JSON.stringify(data) : undefined,
+        credentials: "include",
+      });
+
+      if (res.status === 503 && attempt < maxRetries) {
+        // transient, retry
+        const delayMs = Math.min(1000 * Math.pow(2, attempt), 8000);
+        // eslint-disable-next-line no-console
+        console.warn(`apiRequest: received 503, retrying in ${delayMs}ms (attempt ${attempt + 1})`);
+        await new Promise((r) => setTimeout(r, delayMs));
+        attempt++;
+        continue;
+      }
+
+      await throwIfResNotOk(res);
+      return res;
+    } catch (err) {
+      lastErr = err;
+      // If it's a thrown non-503 error, or we've exhausted retries, rethrow
+      if (attempt >= maxRetries) throw err;
+      const delayMs = Math.min(1000 * Math.pow(2, attempt), 8000);
+      // eslint-disable-next-line no-console
+      console.warn(`apiRequest error, retrying in ${delayMs}ms (attempt ${attempt + 1}):`, err);
+      await new Promise((r) => setTimeout(r, delayMs));
+      attempt++;
+    }
+  }
+
+  // If we exit loop, throw the last error
+  throw lastErr || new Error('apiRequest failed');
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
