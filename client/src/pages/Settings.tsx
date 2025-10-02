@@ -36,6 +36,8 @@ export default function Settings(): JSX.Element {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [newCustomerLocation, setNewCustomerLocation] = useState("");
 
   const ingredientColumns: TableColumn[] = [
     { key: "name", label: "Name" },
@@ -47,7 +49,9 @@ export default function Settings(): JSX.Element {
   ];
 
   const customerColumns: TableColumn[] = [
+    { key: "id", label: "#", render: (v: any, row: any) => row.id ?? '-' },
     { key: "name", label: "Name" },
+    { key: "phone", label: "Number", render: (v: any) => v || '-' },
   ];
 
   async function addCategory() {
@@ -82,9 +86,11 @@ export default function Settings(): JSX.Element {
   async function addCustomer() {
     if (!newCustomerName.trim()) return;
     try {
-      await apiRequest("POST", "/api/customers", { name: newCustomerName });
+      await apiRequest("POST", "/api/customers", { name: newCustomerName, phone: newCustomerPhone || undefined, location: newCustomerLocation || undefined });
       await queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
       setNewCustomerName("");
+      setNewCustomerPhone("");
+      setNewCustomerLocation("");
       setIsAddCustomerOpen(false);
       toast({ title: "Customer added" });
     } catch (e: any) {
@@ -189,7 +195,7 @@ export default function Settings(): JSX.Element {
         <DataTable
           title="Customers"
           columns={customerColumns}
-          data={(customers || []).map((c: any) => ({ id: c.id, name: c.name }))}
+          data={(customers || []).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone }))}
           isLoading={customersLoading}
           onDelete={deleteCustomer}
           emptyMessage="No customers found"
@@ -200,6 +206,14 @@ export default function Settings(): JSX.Element {
             <div>
               <Label>Name</Label>
               <Input value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} />
+            </div>
+            <div>
+              <Label>Phone (Optional)</Label>
+              <Input value={newCustomerPhone} onChange={(e) => setNewCustomerPhone(e.target.value)} placeholder="Contact phone" />
+            </div>
+            <div>
+              <Label>Location (Optional)</Label>
+              <Input value={newCustomerLocation} onChange={(e) => setNewCustomerLocation(e.target.value)} placeholder="e.g., Warehouse A" />
             </div>
           </div>
         </FormModal>

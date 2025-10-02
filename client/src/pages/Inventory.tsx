@@ -135,8 +135,6 @@ export default function Inventory() {
       type: 'addition',
       quantity: parseInt(stockForm.quantity),
       note: stockForm.note || undefined,
-      location: stockForm.location || undefined,
-      phone: stockForm.phone || undefined
     });
   };
 
@@ -242,27 +240,7 @@ export default function Inventory() {
               data-testid="input-quantity"
             />
           </div>
-          <div>
-            <Label htmlFor="location">Location (Optional)</Label>
-            <Input
-              id="location"
-              value={stockForm.location || ''}
-              onChange={(e) => setStockForm(prev => ({ ...prev, location: e.target.value }))}
-              placeholder="e.g., Warehouse A"
-              data-testid="input-location"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="phone">Phone (Optional)</Label>
-            <Input
-              id="phone"
-              value={stockForm.phone || ''}
-              onChange={(e) => setStockForm(prev => ({ ...prev, phone: e.target.value }))}
-              placeholder="Contact phone"
-              data-testid="input-phone"
-            />
-          </div>
+          {/* Location and phone moved to Customer settings - keep inventory focused on quantity/note */}
           
           <div>
             <Label htmlFor="note">Notes (Optional)</Label>
