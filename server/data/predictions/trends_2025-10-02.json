@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-10-02T11:29:45.524Z",
+  "generatedAt": "2025-10-02T18:15:05.620Z",
   "params": {
     "headers": {
       "Content-Type": "application/json"
@@ -1461,288 +1461,292 @@
     },
     {
       "date": "2025-09-30",
-      "value": 0
+      "value": 3.33
     },
     {
       "date": "2025-10-01",
-      "value": 0
+      "value": 6.67
     },
     {
       "date": "2025-10-02",
-      "value": 0
+      "value": 10
     }
   ],
   "predictions": [
     {
       "date": "2025-10-03",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-04",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-05",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-06",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-07",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-08",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-09",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-10",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-11",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-12",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-13",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-14",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-15",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-16",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-17",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-18",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-19",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-20",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-21",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-22",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-23",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-24",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-25",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-26",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-27",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-28",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-29",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-30",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-10-31",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     },
     {
       "date": "2025-11-01",
-      "pred": 0,
-      "lower95": 0,
-      "upper95": 0,
+      "pred": 0.22,
+      "lower95": 0.22,
+      "upper95": 0.22,
       "model": "fallback_moving_average",
-      "reason": "insufficient_history: only 0 non-empty days (<90)",
-      "recommended_action": "predicted decrease -100% - recommend scale-down"
+      "reason": "insufficient_history: only 1 non-empty days (<90)",
+      "recommended_action": "no action"
     }
   ],
-  "outliers": []
+  "outliers": [
+    "2025-09-30",
+    "2025-10-01",
+    "2025-10-02"
+  ]
 }

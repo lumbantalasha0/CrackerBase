@@ -1,4 +1,6 @@
 // Simple Netlify Function to accept POST /api/customers
+import { storage } from '../../server/storage.js';
+
 export const handler = async function (event, context) {
   try {
     if (event.httpMethod !== 'POST') {
@@ -21,15 +23,12 @@ export const handler = async function (event, context) {
       return { statusCode: 400, body: JSON.stringify({ error: 'name is required' }) };
     }
 
-    const saved = {
-      id: Date.now(),
-      name: String(name).trim(),
-      phone: phone ? String(phone).trim() : null,
-      location: location ? String(location).trim() : null,
-      createdAt: new Date().toISOString(),
-    };
-
-    return { statusCode: 200, body: JSON.stringify(saved) };
+    try {
+      const created = await storage.createCustomer({ name: String(name).trim(), phone: phone ? String(phone).trim() : undefined, businessName: undefined, location: location ? String(location).trim() : undefined });
+      return { statusCode: 200, body: JSON.stringify(created) };
+    } catch (err) {
+      return { statusCode: 500, body: JSON.stringify({ error: String(err) }) };
+    }
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: String(err) }) };
   }

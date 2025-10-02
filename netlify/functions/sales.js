@@ -1,4 +1,6 @@
 // Netlify Function to handle POST /api/sales
+import { storage } from '../../server/storage.js';
+
 export const handler = async function (event, context) {
   try {
     if (event.httpMethod !== 'POST') {
@@ -25,15 +27,12 @@ export const handler = async function (event, context) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields' }) };
     }
 
-    const saved = {
-      id: Date.now(),
-      customerId,
-      quantity: Number(quantity),
-      pricePerUnit: Number(pricePerUnit),
-      createdAt: new Date().toISOString(),
-    };
-    // In production, save to DB here
-    return { statusCode: 200, body: JSON.stringify(saved) };
+    try {
+      const created = await storage.createSale({ customerId: customerId ?? undefined, customerName: undefined, quantity: Number(quantity), pricePerUnit: Number(pricePerUnit), status: undefined });
+      return { statusCode: 200, body: JSON.stringify(created) };
+    } catch (err) {
+      return { statusCode: 500, body: JSON.stringify({ error: String(err) }) };
+    }
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: String(err) }) };
   }
