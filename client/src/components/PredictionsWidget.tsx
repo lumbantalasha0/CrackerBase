@@ -14,8 +14,9 @@ export default function PredictionsWidget() {
   async function fetchPredictions() {
     setLoading(true); setError(null);
     try {
-      const res = await apiRequest('POST', '/api/v1/predict/trends', { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ horizon: 14, method: 'auto' }) });
-      const data = await res.json();
+  // Pass the payload as the third argument to apiRequest (it handles headers/body)
+  const res = await apiRequest('POST', '/api/v1/predict/trends', { horizon: 14, method: 'auto' });
+  const data = await res.json();
       // data may be array or object
       const preds = Array.isArray(data) ? data : (data.predictions || data);
       setPredictions(preds.map((p: any) => ({ date: p.date, pred: Number(p.pred), lower95: Number(p.lower95), upper95: Number(p.upper95), recommended_action: p.recommended_action || p.recommendation || '' })));
