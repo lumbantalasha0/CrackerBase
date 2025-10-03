@@ -19,6 +19,11 @@ export const handler = async function (event, context) {
         return { statusCode: 200, body: JSON.stringify(data && data[0]) };
       } catch (err) {
         console.error('sales_v3 supabase error:', err);
+        // if debugging enabled, return Supabase error details to the caller
+        if (process.env.DEBUG_SUPABASE_ERRORS === '1') {
+          const message = err && err.message ? err.message : String(err);
+          return { statusCode: 500, body: JSON.stringify({ error: 'Supabase insert error', details: message }) };
+        }
         // fallback to local /tmp store on error
         try {
           const fs = await import('fs');
