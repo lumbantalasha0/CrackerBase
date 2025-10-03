@@ -6,6 +6,39 @@ export const handler = async function (event, context) {
     const { name, phone, location } = payload;
     if (!name || !String(name).trim()) return { statusCode: 400, body: JSON.stringify({ error: 'name is required' }) };
 
+    // Prefer Supabase when configured
+    if (process.env.SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_KEY)) {
+      try {
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_KEY, { auth: { persistSession: false } });
+        const payload = { name: String(name).trim(), phone: phone ? String(phone).trim() : null, location: location ? String(location).trim() : null, created_at: new Date().toISOString() };
+        const { data, error } = await supabase.from('customers').insert(payload).select().limit(1);
+        if (error) throw error;
+        return { statusCode: 200, body: JSON.stringify(data && data[0]) };
+      } catch (err) {
+        console.error('customers_v3 supabase error:', err);
+        // fallback to local /tmp on error to keep UI usable
+        try {
+          const fs = await import('fs');
+          const path = '/tmp/netlify-fallback.json';
+          let data = { customers: [] };
+          if (fs.existsSync(path)) {
+            const raw = fs.readFileSync(path, 'utf8');
+            data = JSON.parse(raw || '{}');
+            if (!data.customers) data.customers = [];
+          }
+          const saved = { id: `local-${Date.now()}`, name: String(name).trim(), phone: phone ? String(phone).trim() : null, location: location ? String(location).trim() : null, createdAt: new Date().toISOString() };
+          data.customers.unshift(saved);
+          fs.writeFileSync(path, JSON.stringify(data, null, 2), 'utf8');
+          return { statusCode: 200, body: JSON.stringify(saved) };
+        } catch (fsErr) {
+          console.error('customers_v3 fallback write error:', fsErr);
+          const message = err && err.message ? err.message : String(err);
+          return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error', details: message }) };
+        }
+      }
+    }
+
     if (process.env.USE_FIRESTORE === '1') {
       try {
         const adminMod = await import('firebase-admin');
@@ -49,7 +82,7 @@ export const handler = async function (event, context) {
   }
     }
 
-    const saved = { id: Date.now(), name: String(name).trim(), phone: phone ? String(phone).trim() : null, location: location ? String(location).trim() : null, createdAt: new Date().toISOString() };
-    return { statusCode: 200, body: JSON.stringify(saved) };
+  const saved = { id: Date.now(), name: String(name).trim(), phone: phone ? String(phone).trim() : null, location: location ? String(location).trim() : null, createdAt: new Date().toISOString() };
+  return { statusCode: 200, body: JSON.stringify(saved) };
   } catch (err) { return { statusCode: 500, body: JSON.stringify({ error: String(err) }) }; }
 };
