@@ -1,4 +1,4 @@
-name: Netlify: set env, build, deploy, test Firestore
+name: "Netlify: set env, build, deploy, test Supabase"
 
 on:
   workflow_dispatch:
@@ -6,42 +6,35 @@ on:
 jobs:
   deploy-and-test:
     runs-on: ubuntu-latest
-    env:
-      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Node and pnpm
+      - name: Install Node, pnpm and Netlify CLI
         run: |
-          sudo npm i -g pnpm@latest netlify-cli
+          sudo npm i -g pnpm@latest netlify-cli jq
 
-      - name: Encode service account to base64
-        id: encode_sa
+      - name: Ensure required Netlify & Supabase secrets are present
         run: |
-          if [ -f server/service-account.json ]; then
-            SA_B64=$(base64 --wrap=0 server/service-account.json)
-            echo "sa_b64=$SA_B64" >> $GITHUB_OUTPUT
-          else
-            echo "No service-account.json found in repo at server/service-account.json" >&2
+          if [ -z "${{ secrets.NETLIFY_AUTH_TOKEN }}" ] || [ -z "${{ secrets.NETLIFY_SITE_ID }}" ]; then
+            echo "NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID must be set as repository secrets." >&2
             exit 1
           fi
+          if [ -z "${{ secrets.SUPABASE_URL }}" ] || [ -z "${{ secrets.SUPABASE_SERVICE_ROLE }}" ]; then
+            echo "SUPABASE_URL and SUPABASE_SERVICE_ROLE must be set as repository secrets to enable Supabase migration." >&2
+            # we'll still continue; workflow can run with MemStorage fallback
+          fi
 
-      - name: Set Netlify env FIREBASE_SERVICE_ACCOUNT_B64
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      - name: Set Netlify env SUPABASE_URL and SUPABASE_SERVICE_ROLE
         run: |
-          echo "Setting FIREBASE_SERVICE_ACCOUNT_B64 on Netlify..."
-          netlify env:set FIREBASE_SERVICE_ACCOUNT_B64 "${{ steps.encode_sa.outputs.sa_b64 }}" --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN
-
-      - name: Set USE_FIRESTORE=1 on Netlify
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        run: |
-          netlify env:set USE_FIRESTORE 1 --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN || true
+          echo "Setting SUPABASE_URL and SUPABASE_SERVICE_ROLE on Netlify (if provided)"
+          if [ -n "${{ secrets.SUPABASE_URL }}" ]; then
+            netlify env:set SUPABASE_URL "${{ secrets.SUPABASE_URL }}" --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_AUTH_TOKEN }} || true
+          fi
+          if [ -n "${{ secrets.SUPABASE_SERVICE_ROLE }}" ]; then
+            netlify env:set SUPABASE_SERVICE_ROLE "${{ secrets.SUPABASE_SERVICE_ROLE }}" --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_AUTH_TOKEN }} || true
+          fi
 
       - name: Install dependencies
         run: |
@@ -52,36 +45,64 @@ jobs:
           pnpm run build
 
       - name: Deploy to Netlify (prod)
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: |
-          netlify deploy --prod --dir=dist --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN
+          echo "Deploying site to Netlify (prod)"
+          netlify deploy --prod --dir=dist --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_AUTH_TOKEN }}
 
-      - name: Wait briefly for functions to warm
-        run: sleep 10
-
-      - name: Test debug-firestore write
+      - name: Wait for functions to warm and test debug-firestore (with retries)
         env:
           SITE_DOMAIN: ${{ secrets.NETLIFY_SITE_DOMAIN }}
         run: |
           SITE_DOMAIN=${SITE_DOMAIN:-bemacho.netlify.app}
-          echo "Calling debug-firestore?test=1 on https://$SITE_DOMAIN"
+          echo "Checking debug-firestore on https://$SITE_DOMAIN"
           set -e
-          RESP=$(curl -sS -m 30 "https://$SITE_DOMAIN/.netlify/functions/debug-firestore?test=1" || true)
-          echo "response: $RESP"
-          if echo "$RESP" | grep -q '"ok":true'; then
-            echo "Debug test succeeded"
-            echo "$RESP" > debug-response.json
-          else
-            echo "Debug test failed; aborting migration"
+          MAX_ATTEMPTS=8
+          ATTEMPT=1
+          SLEEP=5
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Attempt #$ATTEMPT: calling debug-firestore?test=1..."
+            RESP=$(curl -sS -m 30 "https://$SITE_DOMAIN/.netlify/functions/debug-supabase" || true)
+            echo "response: $RESP"
+            if echo "$RESP" | grep -q '"ok":true'; then
+              echo "Debug test succeeded on attempt $ATTEMPT"
+              echo "$RESP" > debug-response.json
+              break
+            fi
+            echo "Not ready yet (or debug failed). Sleeping $SLEEP seconds and retrying..."
+            sleep $SLEEP
+            ATTEMPT=$((ATTEMPT+1))
+            SLEEP=$((SLEEP*2))
+          done
+          if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+            echo "debug-firestore did not return ok after $MAX_ATTEMPTS attempts" >&2
             exit 1
           fi
 
-      - name: Migrate fallback entries into Firestore
+      - name: Migrate fallback entries into Supabase (if implemented)
         env:
           SITE_DOMAIN: ${{ secrets.NETLIFY_SITE_DOMAIN }}
         run: |
           SITE_DOMAIN=${SITE_DOMAIN:-bemacho.netlify.app}
-          echo "Calling migrate-fallback on https://$SITE_DOMAIN"
-          curl -sS -X POST "https://$SITE_DOMAIN/.netlify/functions/migrate-fallback" | jq '.' || true
+          echo "Calling migrate-to-supabase on https://$SITE_DOMAIN (if function exists)"
+          curl -sS -X POST "https://$SITE_DOMAIN/.netlify/functions/migrate-to-supabase" | jq '.' || true
+
+      - name: Post a small inventory test (verify persistence)
+        env:
+          SITE_DOMAIN: ${{ secrets.NETLIFY_SITE_DOMAIN }}
+        run: |
+          SITE_DOMAIN=${SITE_DOMAIN:-bemacho.netlify.app}
+          echo "Posting inventory test to https://$SITE_DOMAIN/api/inventory"
+          TEST_PAYLOAD='{"productId":null,"quantity":1,"notes":"gha smoke","type":"adjustment","source":"gha"}'
+          for i in 1 2 3; do
+            HTTP_STATUS=$(curl -sS -o /tmp/inv_resp -w "%{http_code}" -X POST "https://$SITE_DOMAIN/api/inventory" -H "Content-Type: application/json" -d "$TEST_PAYLOAD" || true)
+            echo "Attempt $i returned status $HTTP_STATUS"
+            if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "201" ]; then
+              echo "Inventory POST succeeded"
+              cat /tmp/inv_resp || true
+              exit 0
+            fi
+            sleep $((i*3))
+          done
+          echo "Inventory POST failed after retries" >&2
+          cat /tmp/inv_resp || true
+          exit 1

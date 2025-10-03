@@ -16,7 +16,7 @@ const readFile = promisify(fs.readFile);
 const mkdir = promisify(fs.mkdir);
 
 // optional Firestore integration (server-side)
-import { initialized, db } from './firebase';
+import { supabase, supabaseEnabled } from './supabase';
 
 // Storage interface for all business entities
 export interface IStorage {
@@ -514,6 +514,155 @@ export class MemStorage implements IStorage {
     this.saveToDisk().catch(() => {});
   }
 }
+
+// Minimal Supabase-backed storage implementation. This expects the following
+// tables to exist in Supabase: customers, inventory_movements, sales, expense_categories,
+// expenses, ingredients, settings. Each table should have structure compatible with
+// the app's types (id, createdAt, etc.). This implementation focuses on the
+// create/get flows used by the server smoke tests and API handlers.
+export class SupabaseStorage implements IStorage {
+  async getCustomers(): Promise<any[]> {
+    if (!supabase) return [];
+    const { data, error } = await supabase.from('customers').select('*').order('createdAt', { ascending: false });
+    if (error) throw error;
+    return data as any[];
+  }
+
+  async getCustomer(id: number) {
+    if (!supabase) return undefined;
+    const { data } = await supabase.from('customers').select('*').eq('id', id).limit(1);
+    return (data && data[0]) || undefined;
+  }
+
+  async createCustomer(customer: any) {
+    if (!supabase) throw new Error('Supabase not initialized');
+    const payload = { ...customer, createdAt: new Date().toISOString() };
+    const { data, error } = await supabase.from('customers').insert(payload).select().limit(1);
+    if (error) throw error;
+    return data[0];
+  }
+
+  async updateCustomer(id: number, customer: Partial<any>) {
+    if (!supabase) return undefined;
+    const { data, error } = await supabase.from('customers').update(customer).eq('id', id).select().limit(1);
+    if (error) throw error;
+    return (data && data[0]) || undefined;
+  }
+
+  async deleteCustomer(id: number) {
+    if (!supabase) return false;
+    const { error } = await supabase.from('customers').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  }
+
+  // Inventory
+  async getInventoryMovements() {
+    if (!supabase) return [];
+    const { data, error } = await supabase.from('inventory_movements').select('*').order('createdAt', { ascending: false });
+    if (error) throw error;
+    return data as any[];
+  }
+
+  async getInventoryMovement(id: number) {
+    if (!supabase) return undefined;
+    const { data } = await supabase.from('inventory_movements').select('*').eq('id', id).limit(1);
+    return (data && data[0]) || undefined;
+  }
+
+  async createInventoryMovement(movement: any) {
+    if (!supabase) throw new Error('Supabase not initialized');
+    const payload = { ...movement, createdAt: new Date().toISOString() };
+    const { data, error } = await supabase.from('inventory_movements').insert(payload).select().limit(1);
+    if (error) throw error;
+    return data[0];
+  }
+
+  async getCurrentStock() {
+    const movements = await this.getInventoryMovements();
+    if (movements.length === 0) return 0;
+    return movements[0].balance ?? 0;
+  }
+
+  async updateInventoryMovement(id: number, movement: Partial<any>) {
+    if (!supabase) return undefined;
+    const { data, error } = await supabase.from('inventory_movements').update(movement).eq('id', id).select().limit(1);
+    if (error) throw error;
+    return (data && data[0]) || undefined;
+  }
+
+  async deleteInventoryMovement(id: number) {
+    if (!supabase) return false;
+    const { error } = await supabase.from('inventory_movements').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  }
+
+  // Sales
+  async getSales() {
+    if (!supabase) return [];
+    const { data, error } = await supabase.from('sales').select('*').order('createdAt', { ascending: false });
+    if (error) throw error;
+    return data as any[];
+  }
+
+  async getSale(id: number) {
+    if (!supabase) return undefined;
+    const { data } = await supabase.from('sales').select('*').eq('id', id).limit(1);
+    return (data && data[0]) || undefined;
+  }
+
+  async createSale(sale: any) {
+    if (!supabase) throw new Error('Supabase not initialized');
+    const payload = { ...sale, createdAt: new Date().toISOString() };
+    const { data, error } = await supabase.from('sales').insert(payload).select().limit(1);
+    if (error) throw error;
+    // also create inventory movement
+    await this.createInventoryMovement({ type: 'sale', quantity: sale.quantity, note: `Sale to ${sale.customerName || 'Customer'}`, balance: null });
+    return data[0];
+  }
+
+  async updateSale(id: number, sale: Partial<any>) {
+    if (!supabase) return undefined;
+    const { data, error } = await supabase.from('sales').update(sale).eq('id', id).select().limit(1);
+    if (error) throw error;
+    return (data && data[0]) || undefined;
+  }
+
+  async deleteSale(id: number) {
+    if (!supabase) return false;
+    const { error } = await supabase.from('sales').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  }
+
+  // Expense categories & expenses - minimal implementations
+  async getExpenseCategories() { if (!supabase) return []; const { data } = await supabase.from('expense_categories').select('*'); return data as any[]; }
+  async getExpenseCategory(id: number) { if (!supabase) return undefined; const { data } = await supabase.from('expense_categories').select('*').eq('id', id).limit(1); return (data && data[0]) || undefined; }
+  async createExpenseCategory(category: any) { if (!supabase) throw new Error('Supabase not initialized'); const { data, error } = await supabase.from('expense_categories').insert({ ...category, createdAt: new Date().toISOString() }).select().limit(1); if (error) throw error; return data[0]; }
+  async updateExpenseCategory(id: number, category: Partial<any>) { if (!supabase) return undefined; const { data, error } = await supabase.from('expense_categories').update(category).eq('id', id).select().limit(1); if (error) throw error; return (data && data[0]) || undefined; }
+  async deleteExpenseCategory(id: number) { if (!supabase) return false; const { error } = await supabase.from('expense_categories').delete().eq('id', id); if (error) throw error; return true; }
+
+  async getExpenses() { if (!supabase) return []; const { data } = await supabase.from('expenses').select('*'); return data as any[]; }
+  async getExpense(id: number) { if (!supabase) return undefined; const { data } = await supabase.from('expenses').select('*').eq('id', id).limit(1); return (data && data[0]) || undefined; }
+  async createExpense(expense: any) { if (!supabase) throw new Error('Supabase not initialized'); const { data, error } = await supabase.from('expenses').insert({ ...expense, createdAt: new Date().toISOString() }).select().limit(1); if (error) throw error; return data[0]; }
+  async updateExpense(id: number, expense: Partial<any>) { if (!supabase) return undefined; const { data, error } = await supabase.from('expenses').update(expense).eq('id', id).select().limit(1); if (error) throw error; return (data && data[0]) || undefined; }
+  async deleteExpense(id: number) { if (!supabase) return false; const { error } = await supabase.from('expenses').delete().eq('id', id); if (error) throw error; return true; }
+
+  // Ingredients
+  async getIngredients() { if (!supabase) return []; const { data } = await supabase.from('ingredients').select('*').order('createdAt', { ascending: false }); return data as any[]; }
+  async getIngredient(id: number) { if (!supabase) return undefined; const { data } = await supabase.from('ingredients').select('*').eq('id', id).limit(1); return (data && data[0]) || undefined; }
+  async createIngredient(ingredient: any) { if (!supabase) throw new Error('Supabase not initialized'); const { data, error } = await supabase.from('ingredients').insert({ ...ingredient, createdAt: new Date().toISOString() }).select().limit(1); if (error) throw error; return data[0]; }
+  async updateIngredient(id: number, ingredient: Partial<any>) { if (!supabase) return undefined; const { data, error } = await supabase.from('ingredients').update(ingredient).eq('id', id).select().limit(1); if (error) throw error; return (data && data[0]) || undefined; }
+  async deleteIngredient(id: number) { if (!supabase) return false; const { error } = await supabase.from('ingredients').delete().eq('id', id); if (error) throw error; return true; }
+
+  // Settings
+  async getSetting(key: string) { if (!supabase) return undefined; const { data } = await supabase.from('settings').select('value').eq('key', key).limit(1); return (data && data[0] && data[0].value) || undefined; }
+  async setSetting(key: string, value: string) { if (!supabase) throw new Error('Supabase not initialized'); const { data, error } = await supabase.from('settings').upsert({ key, value }).select().limit(1); if (error) throw error; return; }
+}
+
+// Choose storage backend at runtime
+export const storage: IStorage = supabaseEnabled ? new SupabaseStorage() : new MemStorage();
 
 // Firestore-backed adapter (lightweight)
 class FirestoreStorage implements IStorage {

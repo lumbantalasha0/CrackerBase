@@ -1,10 +1,10 @@
 {
   "nextIds": {
-    "nextCustomerId": 16,
-    "nextInventoryId": 22,
-    "nextSaleId": 13,
+    "nextCustomerId": 19,
+    "nextInventoryId": 25,
+    "nextSaleId": 16,
     "nextExpenseCategoryId": 8,
-    "nextExpenseId": 18,
+    "nextExpenseId": 21,
     "nextIngredientId": 6
   },
   "customers": [
@@ -23,6 +23,30 @@
       "businessName": null,
       "location": null,
       "createdAt": "2025-10-02T18:08:40.653Z"
+    },
+    {
+      "id": 16,
+      "name": "MIGRATION TEST",
+      "phone": null,
+      "businessName": null,
+      "location": null,
+      "createdAt": "2025-10-02T19:48:00.957Z"
+    },
+    {
+      "id": 17,
+      "name": "MIGRATION TEST",
+      "phone": null,
+      "businessName": null,
+      "location": null,
+      "createdAt": "2025-10-02T19:54:04.017Z"
+    },
+    {
+      "id": 18,
+      "name": "MIGRATION TEST",
+      "phone": null,
+      "businessName": null,
+      "location": null,
+      "createdAt": "2025-10-02T20:32:34.929Z"
     }
   ],
   "inventoryMovements": [
@@ -41,6 +65,30 @@
       "balance": 5,
       "note": "Sale to MIGRATION TEST",
       "createdAt": "2025-10-02T18:08:40.675Z"
+    },
+    {
+      "id": 22,
+      "type": "sale",
+      "quantity": 1,
+      "balance": 4,
+      "note": "Sale to MIGRATION TEST",
+      "createdAt": "2025-10-02T19:48:00.970Z"
+    },
+    {
+      "id": 23,
+      "type": "sale",
+      "quantity": 1,
+      "balance": 3,
+      "note": "Sale to MIGRATION TEST",
+      "createdAt": "2025-10-02T19:54:04.031Z"
+    },
+    {
+      "id": 24,
+      "type": "sale",
+      "quantity": 1,
+      "balance": 2,
+      "note": "Sale to MIGRATION TEST",
+      "createdAt": "2025-10-02T20:32:34.943Z"
     }
   ],
   "sales": [
@@ -53,6 +101,36 @@
       "totalPrice": "10",
       "status": "completed",
       "createdAt": "2025-10-02T18:08:40.675Z"
+    },
+    {
+      "id": 13,
+      "customerId": 16,
+      "customerName": "MIGRATION TEST",
+      "quantity": 1,
+      "pricePerUnit": "10",
+      "totalPrice": "10",
+      "status": "completed",
+      "createdAt": "2025-10-02T19:48:00.970Z"
+    },
+    {
+      "id": 14,
+      "customerId": 17,
+      "customerName": "MIGRATION TEST",
+      "quantity": 1,
+      "pricePerUnit": "10",
+      "totalPrice": "10",
+      "status": "completed",
+      "createdAt": "2025-10-02T19:54:04.031Z"
+    },
+    {
+      "id": 15,
+      "customerId": 18,
+      "customerName": "MIGRATION TEST",
+      "quantity": 1,
+      "pricePerUnit": "10",
+      "totalPrice": "10",
+      "status": "completed",
+      "createdAt": "2025-10-02T20:32:34.943Z"
     }
   ],
   "expenseCategories": [],
@@ -65,6 +143,33 @@
       "notes": null,
       "status": "approved",
       "createdAt": "2025-10-02T18:08:40.670Z"
+    },
+    {
+      "id": 18,
+      "categoryId": 1,
+      "amount": "12.5",
+      "description": "smoke test",
+      "notes": null,
+      "status": "approved",
+      "createdAt": "2025-10-02T19:48:00.965Z"
+    },
+    {
+      "id": 19,
+      "categoryId": 1,
+      "amount": "12.5",
+      "description": "smoke test",
+      "notes": null,
+      "status": "approved",
+      "createdAt": "2025-10-02T19:54:04.025Z"
+    },
+    {
+      "id": 20,
+      "categoryId": 1,
+      "amount": "12.5",
+      "description": "smoke test",
+      "notes": null,
+      "status": "approved",
+      "createdAt": "2025-10-02T20:32:34.938Z"
     }
   ],
   "ingredients": [],
