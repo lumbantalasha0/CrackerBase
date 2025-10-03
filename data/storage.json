@@ -1,10 +1,10 @@
 {
   "nextIds": {
-    "nextCustomerId": 19,
-    "nextInventoryId": 25,
-    "nextSaleId": 16,
+    "nextCustomerId": 21,
+    "nextInventoryId": 27,
+    "nextSaleId": 18,
     "nextExpenseCategoryId": 8,
-    "nextExpenseId": 21,
+    "nextExpenseId": 23,
     "nextIngredientId": 6
   },
   "customers": [
@@ -47,6 +47,22 @@
       "businessName": null,
       "location": null,
       "createdAt": "2025-10-02T20:32:34.929Z"
+    },
+    {
+      "id": 19,
+      "name": "MIGRATION TEST",
+      "phone": null,
+      "businessName": null,
+      "location": null,
+      "createdAt": "2025-10-03T10:40:41.785Z"
+    },
+    {
+      "id": 20,
+      "name": "MIGRATION TEST",
+      "phone": null,
+      "businessName": null,
+      "location": null,
+      "createdAt": "2025-10-03T10:43:37.711Z"
     }
   ],
   "inventoryMovements": [
@@ -89,6 +105,22 @@
       "balance": 2,
       "note": "Sale to MIGRATION TEST",
       "createdAt": "2025-10-02T20:32:34.943Z"
+    },
+    {
+      "id": 25,
+      "type": "sale",
+      "quantity": 1,
+      "balance": 1,
+      "note": "Sale to MIGRATION TEST",
+      "createdAt": "2025-10-03T10:40:41.801Z"
+    },
+    {
+      "id": 26,
+      "type": "sale",
+      "quantity": 1,
+      "balance": 0,
+      "note": "Sale to MIGRATION TEST",
+      "createdAt": "2025-10-03T10:43:37.723Z"
     }
   ],
   "sales": [
@@ -131,6 +163,26 @@
       "totalPrice": "10",
       "status": "completed",
       "createdAt": "2025-10-02T20:32:34.943Z"
+    },
+    {
+      "id": 16,
+      "customerId": 19,
+      "customerName": "MIGRATION TEST",
+      "quantity": 1,
+      "pricePerUnit": "10",
+      "totalPrice": "10",
+      "status": "completed",
+      "createdAt": "2025-10-03T10:40:41.801Z"
+    },
+    {
+      "id": 17,
+      "customerId": 20,
+      "customerName": "MIGRATION TEST",
+      "quantity": 1,
+      "pricePerUnit": "10",
+      "totalPrice": "10",
+      "status": "completed",
+      "createdAt": "2025-10-03T10:43:37.723Z"
     }
   ],
   "expenseCategories": [],
@@ -170,6 +222,24 @@
       "notes": null,
       "status": "approved",
       "createdAt": "2025-10-02T20:32:34.938Z"
+    },
+    {
+      "id": 21,
+      "categoryId": 1,
+      "amount": "12.5",
+      "description": "smoke test",
+      "notes": null,
+      "status": "approved",
+      "createdAt": "2025-10-03T10:40:41.797Z"
+    },
+    {
+      "id": 22,
+      "categoryId": 1,
+      "amount": "12.5",
+      "description": "smoke test",
+      "notes": null,
+      "status": "approved",
+      "createdAt": "2025-10-03T10:43:37.719Z"
     }
   ],
   "ingredients": [],

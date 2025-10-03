@@ -5,35 +5,29 @@ import express2 from "express";
 import { Router } from "express";
 
 // server/storage.ts
-import fs2 from "fs";
+import fs from "fs";
 import path from "path";
 import { promisify } from "util";
 import { fileURLToPath } from "url";
 
-// server/firebase.ts
-import admin from "firebase-admin";
-import fs from "fs";
-var initialized = false;
-var db = null;
-try {
-  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    const svc = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    admin.initializeApp({ credential: admin.credential.cert(svc) });
-    db = admin.firestore();
-    initialized = true;
-  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS && fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
-    admin.initializeApp();
-    db = admin.firestore();
-    initialized = true;
-  }
-} catch (e) {
-  console.error("firebase-admin init failed:", e?.toString?.() || e);
+// server/supabase.ts
+import { createClient } from "@supabase/supabase-js";
+var supabase = null;
+var supabaseEnabled = false;
+var url = process.env.SUPABASE_URL || "";
+var key = process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_KEY || "";
+if (url && key) {
+  supabase = createClient(url, key, { auth: { persistSession: false } });
+  supabaseEnabled = true;
+  console.log("Supabase client initialized (server)");
+} else {
+  console.log("Supabase not configured (SUPABASE_URL or SUPABASE_SERVICE_ROLE missing)");
 }
 
 // server/storage.ts
-var writeFile = promisify(fs2.writeFile);
-var readFile = promisify(fs2.readFile);
-var mkdir = promisify(fs2.mkdir);
+var writeFile = promisify(fs.writeFile);
+var readFile = promisify(fs.readFile);
+var mkdir = promisify(fs.mkdir);
 var MemStorage = class {
   customers = /* @__PURE__ */ new Map();
   inventoryMovements = /* @__PURE__ */ new Map();
@@ -106,10 +100,10 @@ var MemStorage = class {
         this.nextExpenseCategoryId = ids.nextExpenseCategoryId ?? this.nextExpenseCategoryId;
         this.nextExpenseId = ids.nextExpenseId ?? this.nextExpenseId;
         this.nextIngredientId = ids.nextIngredientId ?? this.nextIngredientId;
-        const loadArrayToMap = (arr = [], map, key = "id") => {
+        const loadArrayToMap = (arr = [], map, key2 = "id") => {
           for (const item of arr) {
-            if (item && item[key] !== void 0) {
-              map.set(item[key], item);
+            if (item && item[key2] !== void 0) {
+              map.set(item[key2], item);
             }
           }
         };
@@ -414,59 +408,64 @@ var MemStorage = class {
     return ok;
   }
   // Settings
-  async getSetting(key) {
-    return this.settings.get(key);
+  async getSetting(key2) {
+    return this.settings.get(key2);
   }
-  async setSetting(key, value) {
-    this.settings.set(key, value);
+  async setSetting(key2, value) {
+    this.settings.set(key2, value);
     this.saveToDisk().catch(() => {
     });
   }
 };
-var FirestoreStorage = class {
+var SupabaseStorage = class {
   async getCustomers() {
-    if (!db) return [];
-    const snap = await db.collection("customers").orderBy("createdAt", "desc").get();
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (!supabase) return [];
+    const { data, error } = await supabase.from("customers").select("*").order("createdAt", { ascending: false });
+    if (error) throw error;
+    return data;
   }
   async getCustomer(id) {
-    if (!db) return void 0;
-    const doc = await db.collection("customers").doc(String(id)).get();
-    return doc.exists ? { id: doc.id, ...doc.data() } : void 0;
+    if (!supabase) return void 0;
+    const { data } = await supabase.from("customers").select("*").eq("id", id).limit(1);
+    return data && data[0] || void 0;
   }
   async createCustomer(customer) {
-    if (!db) throw new Error("Firestore not initialized");
-    const ref = await db.collection("customers").add({ ...customer, createdAt: (/* @__PURE__ */ new Date()).toISOString() });
-    const doc = await ref.get();
-    return { id: ref.id, ...doc.data() };
+    if (!supabase) throw new Error("Supabase not initialized");
+    const payload = { ...customer, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+    const { data, error } = await supabase.from("customers").insert(payload).select().limit(1);
+    if (error) throw error;
+    return data[0];
   }
   async updateCustomer(id, customer) {
-    if (!db) return void 0;
-    const ref = db.collection("customers").doc(String(id));
-    await ref.set({ ...customer }, { merge: true });
-    const doc = await ref.get();
-    return { id: doc.id, ...doc.data() };
+    if (!supabase) return void 0;
+    const { data, error } = await supabase.from("customers").update(customer).eq("id", id).select().limit(1);
+    if (error) throw error;
+    return data && data[0] || void 0;
   }
   async deleteCustomer(id) {
-    if (!db) return false;
-    await db.collection("customers").doc(String(id)).delete();
+    if (!supabase) return false;
+    const { error } = await supabase.from("customers").delete().eq("id", id);
+    if (error) throw error;
     return true;
   }
+  // Inventory
   async getInventoryMovements() {
-    if (!db) return [];
-    const snap = await db.collection("inventoryMovements").orderBy("createdAt", "desc").get();
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (!supabase) return [];
+    const { data, error } = await supabase.from("inventory_movements").select("*").order("createdAt", { ascending: false });
+    if (error) throw error;
+    return data;
   }
   async getInventoryMovement(id) {
-    if (!db) return void 0;
-    const doc = await db.collection("inventoryMovements").doc(String(id)).get();
-    return doc.exists ? { id: doc.id, ...doc.data() } : void 0;
+    if (!supabase) return void 0;
+    const { data } = await supabase.from("inventory_movements").select("*").eq("id", id).limit(1);
+    return data && data[0] || void 0;
   }
   async createInventoryMovement(movement) {
-    if (!db) throw new Error("Firestore not initialized");
-    const ref = await db.collection("inventoryMovements").add({ ...movement, createdAt: (/* @__PURE__ */ new Date()).toISOString() });
-    const doc = await ref.get();
-    return { id: ref.id, ...doc.data() };
+    if (!supabase) throw new Error("Supabase not initialized");
+    const payload = { ...movement, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+    const { data, error } = await supabase.from("inventory_movements").insert(payload).select().limit(1);
+    if (error) throw error;
+    return data[0];
   }
   async getCurrentStock() {
     const movements = await this.getInventoryMovements();
@@ -474,159 +473,149 @@ var FirestoreStorage = class {
     return movements[0].balance ?? 0;
   }
   async updateInventoryMovement(id, movement) {
-    if (!db) return void 0;
-    const ref = db.collection("inventoryMovements").doc(String(id));
-    await ref.set({ ...movement }, { merge: true });
-    const doc = await ref.get();
-    return { id: doc.id, ...doc.data() };
+    if (!supabase) return void 0;
+    const { data, error } = await supabase.from("inventory_movements").update(movement).eq("id", id).select().limit(1);
+    if (error) throw error;
+    return data && data[0] || void 0;
   }
   async deleteInventoryMovement(id) {
-    if (!db) return false;
-    await db.collection("inventoryMovements").doc(String(id)).delete();
+    if (!supabase) return false;
+    const { error } = await supabase.from("inventory_movements").delete().eq("id", id);
+    if (error) throw error;
     return true;
   }
+  // Sales
   async getSales() {
-    if (!db) return [];
-    const snap = await db.collection("sales").orderBy("createdAt", "desc").get();
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (!supabase) return [];
+    const { data, error } = await supabase.from("sales").select("*").order("createdAt", { ascending: false });
+    if (error) throw error;
+    return data;
   }
   async getSale(id) {
-    if (!db) return void 0;
-    const doc = await db.collection("sales").doc(String(id)).get();
-    return doc.exists ? { id: doc.id, ...doc.data() } : void 0;
+    if (!supabase) return void 0;
+    const { data } = await supabase.from("sales").select("*").eq("id", id).limit(1);
+    return data && data[0] || void 0;
   }
   async createSale(sale) {
-    if (!db) throw new Error("Firestore not initialized");
-    const ref = await db.collection("sales").add({ ...sale, createdAt: (/* @__PURE__ */ new Date()).toISOString() });
-    const doc = await ref.get();
-    return { id: ref.id, ...doc.data() };
+    if (!supabase) throw new Error("Supabase not initialized");
+    const payload = { ...sale, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+    const { data, error } = await supabase.from("sales").insert(payload).select().limit(1);
+    if (error) throw error;
+    await this.createInventoryMovement({ type: "sale", quantity: sale.quantity, note: `Sale to ${sale.customerName || "Customer"}`, balance: null });
+    return data[0];
   }
   async updateSale(id, sale) {
-    if (!db) return void 0;
-    const ref = db.collection("sales").doc(String(id));
-    await ref.set({ ...sale }, { merge: true });
-    const doc = await ref.get();
-    return { id: doc.id, ...doc.data() };
+    if (!supabase) return void 0;
+    const { data, error } = await supabase.from("sales").update(sale).eq("id", id).select().limit(1);
+    if (error) throw error;
+    return data && data[0] || void 0;
   }
   async deleteSale(id) {
-    if (!db) return false;
-    await db.collection("sales").doc(String(id)).delete();
+    if (!supabase) return false;
+    const { error } = await supabase.from("sales").delete().eq("id", id);
+    if (error) throw error;
     return true;
   }
+  // Expense categories & expenses - minimal implementations
   async getExpenseCategories() {
-    if (!db) return [];
-    const snap = await db.collection("expenseCategories").orderBy("createdAt", "desc").get();
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (!supabase) return [];
+    const { data } = await supabase.from("expense_categories").select("*");
+    return data;
   }
   async getExpenseCategory(id) {
-    if (!db) return void 0;
-    const doc = await db.collection("expenseCategories").doc(String(id)).get();
-    return doc.exists ? { id: doc.id, ...doc.data() } : void 0;
+    if (!supabase) return void 0;
+    const { data } = await supabase.from("expense_categories").select("*").eq("id", id).limit(1);
+    return data && data[0] || void 0;
   }
   async createExpenseCategory(category) {
-    if (!db) throw new Error("Firestore not initialized");
-    const ref = await db.collection("expenseCategories").add({ ...category, createdAt: (/* @__PURE__ */ new Date()).toISOString() });
-    const doc = await ref.get();
-    return { id: ref.id, ...doc.data() };
+    if (!supabase) throw new Error("Supabase not initialized");
+    const { data, error } = await supabase.from("expense_categories").insert({ ...category, createdAt: (/* @__PURE__ */ new Date()).toISOString() }).select().limit(1);
+    if (error) throw error;
+    return data[0];
   }
   async updateExpenseCategory(id, category) {
-    if (!db) return void 0;
-    const ref = db.collection("expenseCategories").doc(String(id));
-    await ref.set({ ...category }, { merge: true });
-    const doc = await ref.get();
-    return { id: doc.id, ...doc.data() };
+    if (!supabase) return void 0;
+    const { data, error } = await supabase.from("expense_categories").update(category).eq("id", id).select().limit(1);
+    if (error) throw error;
+    return data && data[0] || void 0;
   }
   async deleteExpenseCategory(id) {
-    if (!db) return false;
-    await db.collection("expenseCategories").doc(String(id)).delete();
+    if (!supabase) return false;
+    const { error } = await supabase.from("expense_categories").delete().eq("id", id);
+    if (error) throw error;
     return true;
   }
   async getExpenses() {
-    if (!db) return [];
-    const snap = await db.collection("expenses").orderBy("createdAt", "desc").get();
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (!supabase) return [];
+    const { data } = await supabase.from("expenses").select("*");
+    return data;
   }
   async getExpense(id) {
-    if (!db) return void 0;
-    const doc = await db.collection("expenses").doc(String(id)).get();
-    return doc.exists ? { id: doc.id, ...doc.data() } : void 0;
+    if (!supabase) return void 0;
+    const { data } = await supabase.from("expenses").select("*").eq("id", id).limit(1);
+    return data && data[0] || void 0;
   }
   async createExpense(expense) {
-    if (!db) throw new Error("Firestore not initialized");
-    const ref = await db.collection("expenses").add({ ...expense, createdAt: (/* @__PURE__ */ new Date()).toISOString() });
-    const doc = await ref.get();
-    return { id: ref.id, ...doc.data() };
+    if (!supabase) throw new Error("Supabase not initialized");
+    const { data, error } = await supabase.from("expenses").insert({ ...expense, createdAt: (/* @__PURE__ */ new Date()).toISOString() }).select().limit(1);
+    if (error) throw error;
+    return data[0];
   }
   async updateExpense(id, expense) {
-    if (!db) return void 0;
-    const ref = db.collection("expenses").doc(String(id));
-    await ref.set({ ...expense }, { merge: true });
-    const doc = await ref.get();
-    return { id: doc.id, ...doc.data() };
+    if (!supabase) return void 0;
+    const { data, error } = await supabase.from("expenses").update(expense).eq("id", id).select().limit(1);
+    if (error) throw error;
+    return data && data[0] || void 0;
   }
   async deleteExpense(id) {
-    if (!db) return false;
-    await db.collection("expenses").doc(String(id)).delete();
+    if (!supabase) return false;
+    const { error } = await supabase.from("expenses").delete().eq("id", id);
+    if (error) throw error;
     return true;
   }
+  // Ingredients
   async getIngredients() {
-    if (!db) return [];
-    const snap = await db.collection("ingredients").orderBy("name").get();
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (!supabase) return [];
+    const { data } = await supabase.from("ingredients").select("*").order("createdAt", { ascending: false });
+    return data;
   }
   async getIngredient(id) {
-    if (!db) return void 0;
-    const doc = await db.collection("ingredients").doc(String(id)).get();
-    return doc.exists ? { id: doc.id, ...doc.data() } : void 0;
+    if (!supabase) return void 0;
+    const { data } = await supabase.from("ingredients").select("*").eq("id", id).limit(1);
+    return data && data[0] || void 0;
   }
   async createIngredient(ingredient) {
-    if (!db) throw new Error("Firestore not initialized");
-    const ref = await db.collection("ingredients").add({ ...ingredient, createdAt: (/* @__PURE__ */ new Date()).toISOString() });
-    const doc = await ref.get();
-    return { id: ref.id, ...doc.data() };
+    if (!supabase) throw new Error("Supabase not initialized");
+    const { data, error } = await supabase.from("ingredients").insert({ ...ingredient, createdAt: (/* @__PURE__ */ new Date()).toISOString() }).select().limit(1);
+    if (error) throw error;
+    return data[0];
   }
   async updateIngredient(id, ingredient) {
-    if (!db) return void 0;
-    const ref = db.collection("ingredients").doc(String(id));
-    await ref.set({ ...ingredient }, { merge: true });
-    const doc = await ref.get();
-    return { id: doc.id, ...doc.data() };
+    if (!supabase) return void 0;
+    const { data, error } = await supabase.from("ingredients").update(ingredient).eq("id", id).select().limit(1);
+    if (error) throw error;
+    return data && data[0] || void 0;
   }
   async deleteIngredient(id) {
-    if (!db) return false;
-    await db.collection("ingredients").doc(String(id)).delete();
+    if (!supabase) return false;
+    const { error } = await supabase.from("ingredients").delete().eq("id", id);
+    if (error) throw error;
     return true;
   }
-  async getSetting(key) {
-    if (!db) return void 0;
-    const doc = await db.collection("settings").doc(key).get();
-    return doc.exists ? String(doc.data().value) : void 0;
+  // Settings
+  async getSetting(key2) {
+    if (!supabase) return void 0;
+    const { data } = await supabase.from("settings").select("value").eq("key", key2).limit(1);
+    return data && data[0] && data[0].value || void 0;
   }
-  async setSetting(key, value) {
-    if (!db) throw new Error("Firestore not initialized");
-    await db.collection("settings").doc(key).set({ value });
+  async setSetting(key2, value) {
+    if (!supabase) throw new Error("Supabase not initialized");
+    const { data, error } = await supabase.from("settings").upsert({ key: key2, value }).select().limit(1);
+    if (error) throw error;
+    return;
   }
 };
-var useFirestore = process.env.USE_FIRESTORE === "1" && initialized && db;
-var memInstance = new MemStorage();
-var firestoreInstance = useFirestore ? new FirestoreStorage() : null;
-var storage = new Proxy(memInstance, {
-  get(target, prop) {
-    const f = firestoreInstance && firestoreInstance[prop];
-    const m = target[prop];
-    if (typeof f === "function") {
-      return async (...args) => {
-        try {
-          return await f.apply(firestoreInstance, args);
-        } catch (err) {
-          console.error(`Firestore operation ${String(prop)} failed, falling back to local storage:`, err && err.message ? err.message : err);
-          return await m.apply(target, args);
-        }
-      };
-    }
-    return m;
-  }
-});
+var storage = supabaseEnabled ? new SupabaseStorage() : new MemStorage();
 
 // shared/schema.ts
 import { pgTable, serial, text, integer, decimal, timestamp } from "drizzle-orm/pg-core";
@@ -752,7 +741,7 @@ var insertIngredientSchema = createInsertSchema(ingredients).omit({
 import { z as z2 } from "zod";
 
 // server/predict/trends.ts
-import fs3 from "fs/promises";
+import fs2 from "fs/promises";
 import path2 from "path";
 function toLusakaDate(d) {
   return new Date(d.getTime() + 2 * 60 * 60 * 1e3);
@@ -762,7 +751,7 @@ function dateKey(d) {
 }
 async function ensurePredictionsDir() {
   const dir = path2.resolve(path2.dirname(new URL(import.meta.url).pathname), "..", "data", "predictions");
-  await fs3.mkdir(dir, { recursive: true });
+  await fs2.mkdir(dir, { recursive: true });
   return dir;
 }
 function rangeDays(start, end) {
@@ -785,8 +774,8 @@ async function predictTrends(opts) {
   const perDay = {};
   for (const s of sales2) {
     const dt = toLusakaDate(new Date(s.createdAt));
-    const key = dateKey(dt);
-    perDay[key] = (perDay[key] || 0) + Number(s.totalPrice || 0);
+    const key2 = dateKey(dt);
+    perDay[key2] = (perDay[key2] || 0) + Number(s.totalPrice || 0);
   }
   const days = rangeDays(start, end);
   const series = days.map((d) => ({ date: d, value: perDay[d] ?? 0 }));
@@ -934,7 +923,7 @@ async function predictTrends(opts) {
     predictions: outPreds.map((p) => ({ ...p, recommended_action: recommendations[p.date] })),
     outliers
   };
-  await fs3.writeFile(path2.join(dir, filename), JSON.stringify(outPayload, null, 2), "utf8");
+  await fs2.writeFile(path2.join(dir, filename), JSON.stringify(outPayload, null, 2), "utf8");
   if (opts.storeDb) {
     try {
       await storage.setSetting(`predictions:${filename}`, JSON.stringify(outPayload));
@@ -1497,7 +1486,7 @@ router.get("/api/analytics/aggregates", async (req, res) => {
     const dayExpenses = expenses2.filter((e) => new Date(e.createdAt) >= startOfDay);
     const weekExpenses = expenses2.filter((e) => new Date(e.createdAt) >= startOfWeek);
     const monthExpenses = expenses2.filter((e) => new Date(e.createdAt) >= startOfMonth);
-    const sum = (arr, key) => arr.reduce((s, x) => s + Number(x[key] || 0), 0);
+    const sum = (arr, key2) => arr.reduce((s, x) => s + Number(x[key2] || 0), 0);
     res.json({
       dailyProfit: sum(daySales, "totalPrice") - sum(dayExpenses, "amount"),
       weeklyProfit: sum(weekSales, "totalPrice") - sum(weekExpenses, "amount"),
@@ -1576,7 +1565,7 @@ var emailExport_default = router2;
 
 // server/vite.ts
 import express from "express";
-import fs4 from "fs";
+import fs3 from "fs";
 import path4 from "path";
 import { createServer as createViteServer, createLogger } from "vite";
 
@@ -1652,8 +1641,8 @@ async function setupVite(app2, server) {
   });
   app2.use(vite.middlewares);
   app2.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
-    if (url.startsWith("/api")) return next();
+    const url2 = req.originalUrl;
+    if (url2.startsWith("/api")) return next();
     try {
       const clientTemplate = path4.resolve(
         import.meta.dirname,
@@ -1661,12 +1650,12 @@ async function setupVite(app2, server) {
         "client",
         "index.html"
       );
-      let template = await fs4.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs3.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
       );
-      const page = await vite.transformIndexHtml(url, template);
+      const page = await vite.transformIndexHtml(url2, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e);
@@ -1676,7 +1665,7 @@ async function setupVite(app2, server) {
 }
 function serveStatic(app2) {
   const distPath = path4.resolve(import.meta.dirname, "public");
-  if (!fs4.existsSync(distPath)) {
+  if (!fs3.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
