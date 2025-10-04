@@ -1,25 +1,23 @@
-import { createClient } from '@supabase/supabase-js';
+import { neon } from '@netlify/neon';
 
 export const handler = async () => {
   try {
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_KEY;
-    if (!url || !key) {
-      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'SUPABASE_URL or SUPABASE_SERVICE_ROLE not set' }) };
-    }
-    const supabase = createClient(url, key, { auth: { persistSession: false } });
-    // attempt a small write to a debug table `debug_table` (create if missing is left to maintainer)
-    const timestamp = new Date().toISOString();
-    try {
-      const { data, error } = await supabase.from('debug_table').insert({ note: 'debug', created_at: timestamp }).select().limit(1);
-      if (error) {
-        return { statusCode: 500, body: JSON.stringify({ ok: false, error: error.message || String(error) }) };
+    // Prefer Neon/Postgres when NETLIFY_DATABASE_URL is set
+    if (process.env.NETLIFY_DATABASE_URL) {
+      try {
+        const sql = neon();
+        const timestamp = new Date().toISOString();
+        const rows = await sql`INSERT INTO public.debug_table (note, created_at) VALUES ('debug', ${timestamp}) RETURNING id, note, created_at`;
+        const data = rows && rows[0] ? rows[0] : null;
+        return { statusCode: 200, body: JSON.stringify({ ok: true, data }) };
+      } catch (err) {
+        return { statusCode: 500, body: JSON.stringify({ ok: false, error: (err && err.message) || String(err) }) };
       }
-      return { statusCode: 200, body: JSON.stringify({ ok: true, data: data && data[0] }) };
-    } catch (e) {
-      return { statusCode: 500, body: JSON.stringify({ ok: false, error: (e && e.toString && e.toString()) || String(e) }) };
     }
+
+    // Fallback: indicate Supabase not configured for this endpoint
+    return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'NETLIFY_DATABASE_URL not set' }) };
   } catch (e) {
-    return { statusCode: 500, body: JSON.stringify({ ok: false, error: (e && e.toString && e.toString()) || String(e) }) };
+    return { statusCode: 500, body: JSON.stringify({ ok: false, error: (e && e.message) || String(e) }) };
   }
 };

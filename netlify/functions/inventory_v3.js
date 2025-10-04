@@ -10,47 +10,30 @@ export const handler = async function (event, context) {
     if (!type) return { statusCode: 400, body: JSON.stringify({ error: 'type is required' }) };
     if (quantity == null || isNaN(Number(quantity))) return { statusCode: 400, body: JSON.stringify({ error: 'quantity must be a number' }) };
 
-    // Prefer Supabase when configured
-    if (process.env.SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_KEY)) {
+    // Prefer Neon/Postgres when NETLIFY_DATABASE_URL is set
+    if (process.env.NETLIFY_DATABASE_URL) {
       try {
-        const { createClient } = await import('@supabase/supabase-js');
-        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_KEY, { auth: { persistSession: false } });
-
+        const { neon } = await import('@netlify/neon');
+        const sql = neon();
         // fetch latest movement to compute balance
-        const { data: last, error: lastErr } = await supabase.from('inventory_movements').select('*').order('created_at', { ascending: false }).limit(1);
-        if (lastErr) throw lastErr;
-        const currentBalance = (last && last[0] && Number(last[0].balance)) || 0;
+        const lastRows = await sql`SELECT balance FROM public.inventory_movements ORDER BY created_at DESC LIMIT 1`;
+        const currentBalance = (lastRows && lastRows[0] && Number(lastRows[0].balance)) || 0;
         const qty = Number(quantity);
         const newBalance = type === 'addition' ? currentBalance + qty : currentBalance - qty;
-        const payload = { type, quantity: qty, balance: newBalance, note: note ?? null, created_at: new Date().toISOString() };
-        const { data, error } = await supabase.from('inventory_movements').insert(payload).select().limit(1);
-        if (error) throw error;
-        return { statusCode: 200, body: JSON.stringify(data && data[0]) };
+        const createdAt = new Date().toISOString();
+        const rows = await sql`
+          INSERT INTO public.inventory_movements (type, quantity, balance, note, created_at)
+          VALUES (${type}, ${qty}, ${newBalance}, ${note ?? null}, ${createdAt})
+          RETURNING id, type, quantity, balance, note, created_at
+        `;
+        return { statusCode: 200, body: JSON.stringify(rows && rows[0] ? rows[0] : null) };
       } catch (err) {
-        console.error('inventory_v3 supabase error:', err);
+        console.error('inventory_v3 neon error:', err);
         if (process.env.DEBUG_SUPABASE_ERRORS === '1') {
           const message = err && err.message ? err.message : String(err);
-          return { statusCode: 500, body: JSON.stringify({ error: 'Supabase insert error', details: message }) };
+          return { statusCode: 500, body: JSON.stringify({ error: 'Neon insert error', details: message }) };
         }
-        // fallback to local /tmp to keep UI usable
-        try {
-          const fs = await import('fs');
-          const path = '/tmp/netlify-fallback.json';
-          let data = { inventoryMovements: [] };
-          if (fs.existsSync(path)) {
-            const raw = fs.readFileSync(path, 'utf8');
-            data = JSON.parse(raw || '{}');
-            if (!data.inventoryMovements) data.inventoryMovements = [];
-          }
-          const qty = Number(quantity);
-          const saved = { id: `local-${Date.now()}`, type, quantity: qty, balance: null, note: note ?? null, createdAt: new Date().toISOString() };
-          data.inventoryMovements.unshift(saved);
-          fs.writeFileSync(path, JSON.stringify(data, null, 2), 'utf8');
-          return { statusCode: 200, body: JSON.stringify(saved) };
-        } catch (fsErr) {
-          console.error('inventory_v3 fallback write error:', fsErr);
-          return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error', details: (err && err.message) || String(err) }) };
-        }
+        // fallback to local /tmp to keep UI usable (below)
       }
     }
 
