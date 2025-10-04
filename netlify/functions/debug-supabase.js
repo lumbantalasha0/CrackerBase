@@ -5,10 +5,11 @@ export const handler = async () => {
     // Prefer Neon/Postgres when NETLIFY_DATABASE_URL is set
     if (process.env.NETLIFY_DATABASE_URL) {
       try {
-        const sql = neon();
+        const { createClient } = await import('@neondatabase/serverless');
+        const sql = createClient({ connectionString: process.env.NETLIFY_DATABASE_URL });
         const timestamp = new Date().toISOString();
-        const rows = await sql`INSERT INTO public.debug_table (note, created_at) VALUES ('debug', ${timestamp}) RETURNING id, note, created_at`;
-        const data = rows && rows[0] ? rows[0] : null;
+        const res = await sql.query('INSERT INTO public.debug_table (note, created_at) VALUES ($1, $2) RETURNING id, note, created_at', ['debug', timestamp]);
+        const data = (res && res.rows && res.rows[0]) ? res.rows[0] : null;
         return { statusCode: 200, body: JSON.stringify({ ok: true, data }) };
       } catch (err) {
         return { statusCode: 500, body: JSON.stringify({ ok: false, error: (err && err.message) || String(err) }) };
