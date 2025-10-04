@@ -9,21 +9,16 @@ export const handler = async function (event, context) {
     // Prefer Neon/Postgres when NETLIFY_DATABASE_URL is set
     if (process.env.NETLIFY_DATABASE_URL) {
       try {
-        const { neon } = await import('@netlify/neon');
-        const sql = neon();
+        const { createClient } = await import('@neondatabase/serverless');
+        const sql = createClient({ connectionString: process.env.NETLIFY_DATABASE_URL });
         const createdAt = new Date().toISOString();
-        const rows = await sql`
-          INSERT INTO public.sales (customer_id, customer_name, quantity, price_per_unit, total_price, status, created_at)
-          VALUES (${customerId ?? null}, ${null}, ${Number(quantity)}, ${Number(pricePerUnit)}, ${Number(pricePerUnit) * Number(quantity)}, 'completed', ${createdAt})
-          RETURNING id, customer_id, quantity, price_per_unit, total_price, status, created_at
-        `;
-        const sale = rows && rows[0] ? rows[0] : null;
-        // also create inventory movement (best-effort)
+        const res = await sql.query(
+          'INSERT INTO public.sales (customer_id, customer_name, quantity, price_per_unit, total_price, status, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, customer_id, quantity, price_per_unit, total_price, status, created_at',
+          [customerId ?? null, null, Number(quantity), Number(pricePerUnit), Number(pricePerUnit) * Number(quantity), 'completed', createdAt]
+        );
+        const sale = (res && res.rows && res.rows[0]) ? res.rows[0] : null;
         try {
-          await sql`
-            INSERT INTO public.inventory_movements (type, quantity, balance, note, created_at)
-            VALUES ('sale', ${Number(quantity)}, NULL, ${`Sale to ${customerId ?? 'Customer'}`}, ${createdAt})
-          `;
+          await sql.query('INSERT INTO public.inventory_movements (type, quantity, balance, note, created_at) VALUES ($1,$2,$3,$4,$5)', ['sale', Number(quantity), null, `Sale to ${customerId ?? 'Customer'}`, createdAt]);
         } catch (e) {
           console.error('sales_v3 neon inventory insert error:', e);
         }

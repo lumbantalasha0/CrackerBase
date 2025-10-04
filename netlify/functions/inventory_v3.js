@@ -13,20 +13,15 @@ export const handler = async function (event, context) {
     // Prefer Neon/Postgres when NETLIFY_DATABASE_URL is set
     if (process.env.NETLIFY_DATABASE_URL) {
       try {
-        const { neon } = await import('@netlify/neon');
-        const sql = neon();
-        // fetch latest movement to compute balance
-        const lastRows = await sql`SELECT balance FROM public.inventory_movements ORDER BY created_at DESC LIMIT 1`;
-        const currentBalance = (lastRows && lastRows[0] && Number(lastRows[0].balance)) || 0;
+        const { createClient } = await import('@neondatabase/serverless');
+        const sql = createClient({ connectionString: process.env.NETLIFY_DATABASE_URL });
+        const lastRes = await sql.query('SELECT balance FROM public.inventory_movements ORDER BY created_at DESC LIMIT 1');
+        const currentBalance = (lastRes && lastRes.rows && lastRes.rows[0] && Number(lastRes.rows[0].balance)) || 0;
         const qty = Number(quantity);
         const newBalance = type === 'addition' ? currentBalance + qty : currentBalance - qty;
         const createdAt = new Date().toISOString();
-        const rows = await sql`
-          INSERT INTO public.inventory_movements (type, quantity, balance, note, created_at)
-          VALUES (${type}, ${qty}, ${newBalance}, ${note ?? null}, ${createdAt})
-          RETURNING id, type, quantity, balance, note, created_at
-        `;
-        return { statusCode: 200, body: JSON.stringify(rows && rows[0] ? rows[0] : null) };
+        const res = await sql.query('INSERT INTO public.inventory_movements (type, quantity, balance, note, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING id, type, quantity, balance, note, created_at', [type, qty, newBalance, note ?? null, createdAt]);
+        return { statusCode: 200, body: JSON.stringify(res && res.rows && res.rows[0] ? res.rows[0] : null) };
       } catch (err) {
         console.error('inventory_v3 neon error:', err);
         if (process.env.DEBUG_SUPABASE_ERRORS === '1') {
