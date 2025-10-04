@@ -522,8 +522,8 @@ export class MemStorage implements IStorage {
 // create/get flows used by the server smoke tests and API handlers.
 export class SupabaseStorage implements IStorage {
   async getCustomers(): Promise<any[]> {
-    if (!supabase) return [];
-    const { data, error } = await supabase.from('customers').select('*').order('createdAt', { ascending: false });
+  if (!supabase) return [];
+  const { data, error } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     return data as any[];
   }
@@ -536,7 +536,13 @@ export class SupabaseStorage implements IStorage {
 
   async createCustomer(customer: any) {
     if (!supabase) throw new Error('Supabase not initialized');
-    const payload = { ...customer, createdAt: new Date().toISOString() };
+    const payload = {
+      name: customer.name,
+      phone: customer.phone ?? null,
+      business_name: customer.businessName ?? customer.business_name ?? null,
+      location: customer.location ?? null,
+      created_at: new Date().toISOString(),
+    };
     const { data, error } = await supabase.from('customers').insert(payload).select().limit(1);
     if (error) throw error;
     return data[0];
@@ -558,8 +564,8 @@ export class SupabaseStorage implements IStorage {
 
   // Inventory
   async getInventoryMovements() {
-    if (!supabase) return [];
-    const { data, error } = await supabase.from('inventory_movements').select('*').order('createdAt', { ascending: false });
+  if (!supabase) return [];
+  const { data, error } = await supabase.from('inventory_movements').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     return data as any[];
   }
@@ -572,7 +578,13 @@ export class SupabaseStorage implements IStorage {
 
   async createInventoryMovement(movement: any) {
     if (!supabase) throw new Error('Supabase not initialized');
-    const payload = { ...movement, createdAt: new Date().toISOString() };
+    const payload = {
+      type: movement.type,
+      quantity: movement.quantity,
+      balance: movement.balance ?? null,
+      note: movement.note ?? null,
+      created_at: new Date().toISOString(),
+    };
     const { data, error } = await supabase.from('inventory_movements').insert(payload).select().limit(1);
     if (error) throw error;
     return data[0];
@@ -600,8 +612,8 @@ export class SupabaseStorage implements IStorage {
 
   // Sales
   async getSales() {
-    if (!supabase) return [];
-    const { data, error } = await supabase.from('sales').select('*').order('createdAt', { ascending: false });
+  if (!supabase) return [];
+  const { data, error } = await supabase.from('sales').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     return data as any[];
   }
@@ -614,7 +626,15 @@ export class SupabaseStorage implements IStorage {
 
   async createSale(sale: any) {
     if (!supabase) throw new Error('Supabase not initialized');
-    const payload = { ...sale, createdAt: new Date().toISOString() };
+    const payload = {
+      customer_id: sale.customerId ?? sale.customer_id ?? null,
+      customer_name: sale.customerName ?? sale.customer_name ?? null,
+      quantity: Number(sale.quantity),
+      price_per_unit: typeof sale.pricePerUnit === 'number' ? sale.pricePerUnit : Number(sale.pricePerUnit),
+      total_price: typeof sale.totalPrice === 'number' ? sale.totalPrice : (Number(sale.pricePerUnit) * Number(sale.quantity)),
+      status: sale.status ?? 'completed',
+      created_at: new Date().toISOString(),
+    };
     const { data, error } = await supabase.from('sales').insert(payload).select().limit(1);
     if (error) throw error;
     // also create inventory movement
@@ -639,21 +659,21 @@ export class SupabaseStorage implements IStorage {
   // Expense categories & expenses - minimal implementations
   async getExpenseCategories() { if (!supabase) return []; const { data } = await supabase.from('expense_categories').select('*'); return data as any[]; }
   async getExpenseCategory(id: number) { if (!supabase) return undefined; const { data } = await supabase.from('expense_categories').select('*').eq('id', id).limit(1); return (data && data[0]) || undefined; }
-  async createExpenseCategory(category: any) { if (!supabase) throw new Error('Supabase not initialized'); const { data, error } = await supabase.from('expense_categories').insert({ ...category, createdAt: new Date().toISOString() }).select().limit(1); if (error) throw error; return data[0]; }
-  async updateExpenseCategory(id: number, category: Partial<any>) { if (!supabase) return undefined; const { data, error } = await supabase.from('expense_categories').update(category).eq('id', id).select().limit(1); if (error) throw error; return (data && data[0]) || undefined; }
+  async createExpenseCategory(category: any) { if (!supabase) throw new Error('Supabase not initialized'); const payload = { name: category.name, color: category.color ?? null, created_at: new Date().toISOString() }; const { data, error } = await supabase.from('expense_categories').insert(payload).select().limit(1); if (error) throw error; return data[0]; }
+  async updateExpenseCategory(id: number, category: Partial<any>) { if (!supabase) return undefined; const mapped = { ...(category as any) }; if ((category as any).name !== undefined) mapped.name = (category as any).name; if ((category as any).color !== undefined) mapped.color = (category as any).color; const { data, error } = await supabase.from('expense_categories').update(mapped).eq('id', id).select().limit(1); if (error) throw error; return (data && data[0]) || undefined; }
   async deleteExpenseCategory(id: number) { if (!supabase) return false; const { error } = await supabase.from('expense_categories').delete().eq('id', id); if (error) throw error; return true; }
 
   async getExpenses() { if (!supabase) return []; const { data } = await supabase.from('expenses').select('*'); return data as any[]; }
   async getExpense(id: number) { if (!supabase) return undefined; const { data } = await supabase.from('expenses').select('*').eq('id', id).limit(1); return (data && data[0]) || undefined; }
-  async createExpense(expense: any) { if (!supabase) throw new Error('Supabase not initialized'); const { data, error } = await supabase.from('expenses').insert({ ...expense, createdAt: new Date().toISOString() }).select().limit(1); if (error) throw error; return data[0]; }
-  async updateExpense(id: number, expense: Partial<any>) { if (!supabase) return undefined; const { data, error } = await supabase.from('expenses').update(expense).eq('id', id).select().limit(1); if (error) throw error; return (data && data[0]) || undefined; }
+  async createExpense(expense: any) { if (!supabase) throw new Error('Supabase not initialized'); const payload = { category_id: expense.categoryId ?? expense.category_id ?? null, amount: typeof expense.amount === 'number' ? expense.amount : Number(expense.amount), description: expense.description, notes: expense.notes ?? null, status: expense.status ?? 'approved', created_at: new Date().toISOString() }; const { data, error } = await supabase.from('expenses').insert(payload).select().limit(1); if (error) throw error; return data[0]; }
+  async updateExpense(id: number, expense: Partial<any>) { if (!supabase) return undefined; const mapped: any = {}; if ((expense as any).categoryId !== undefined) mapped.category_id = (expense as any).categoryId; if ((expense as any).description !== undefined) mapped.description = (expense as any).description; if ((expense as any).notes !== undefined) mapped.notes = (expense as any).notes; if ((expense as any).status !== undefined) mapped.status = (expense as any).status; if ((expense as any).amount !== undefined) mapped.amount = typeof (expense as any).amount === 'number' ? (expense as any).amount : Number((expense as any).amount); const { data, error } = await supabase.from('expenses').update(mapped).eq('id', id).select().limit(1); if (error) throw error; return (data && data[0]) || undefined; }
   async deleteExpense(id: number) { if (!supabase) return false; const { error } = await supabase.from('expenses').delete().eq('id', id); if (error) throw error; return true; }
 
   // Ingredients
-  async getIngredients() { if (!supabase) return []; const { data } = await supabase.from('ingredients').select('*').order('createdAt', { ascending: false }); return data as any[]; }
+  async getIngredients() { if (!supabase) return []; const { data } = await supabase.from('ingredients').select('*').order('created_at', { ascending: false }); return data as any[]; }
   async getIngredient(id: number) { if (!supabase) return undefined; const { data } = await supabase.from('ingredients').select('*').eq('id', id).limit(1); return (data && data[0]) || undefined; }
-  async createIngredient(ingredient: any) { if (!supabase) throw new Error('Supabase not initialized'); const { data, error } = await supabase.from('ingredients').insert({ ...ingredient, createdAt: new Date().toISOString() }).select().limit(1); if (error) throw error; return data[0]; }
-  async updateIngredient(id: number, ingredient: Partial<any>) { if (!supabase) return undefined; const { data, error } = await supabase.from('ingredients').update(ingredient).eq('id', id).select().limit(1); if (error) throw error; return (data && data[0]) || undefined; }
+  async createIngredient(ingredient: any) { if (!supabase) throw new Error('Supabase not initialized'); const payload = { name: ingredient.name, multiplier: typeof ingredient.multiplier === 'number' ? ingredient.multiplier : Number(ingredient.multiplier), unit: ingredient.unit ?? 'g', created_at: new Date().toISOString() }; const { data, error } = await supabase.from('ingredients').insert(payload).select().limit(1); if (error) throw error; return data[0]; }
+  async updateIngredient(id: number, ingredient: Partial<any>) { if (!supabase) return undefined; const mapped: any = {}; if ((ingredient as any).name !== undefined) mapped.name = (ingredient as any).name; if ((ingredient as any).unit !== undefined) mapped.unit = (ingredient as any).unit; if ((ingredient as any).multiplier !== undefined) mapped.multiplier = typeof (ingredient as any).multiplier === 'number' ? (ingredient as any).multiplier : Number((ingredient as any).multiplier); const { data, error } = await supabase.from('ingredients').update(mapped).eq('id', id).select().limit(1); if (error) throw error; return (data && data[0]) || undefined; }
   async deleteIngredient(id: number) { if (!supabase) return false; const { error } = await supabase.from('ingredients').delete().eq('id', id); if (error) throw error; return true; }
 
   // Settings
