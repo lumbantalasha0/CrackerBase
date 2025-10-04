@@ -1,5 +1,3 @@
-import { neon } from '@netlify/neon';
-
 export const handler = async () => {
   try {
     // Prefer Neon/Postgres when NETLIFY_DATABASE_URL is set
