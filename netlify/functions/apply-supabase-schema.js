@@ -1,6 +1,8 @@
-import { neon } from '@netlify/neon';
 import fs from 'fs/promises';
 import path from 'path';
+
+// Use the neondatabase serverless client which is present in package.json
+import { createClient } from '@neondatabase/serverless';
 
 // Safety guard: require explicit env var to be set in Netlify to allow running this.
 // Set ALLOW_SCHEMA_APPLY=1 in your Netlify site envs to enable.
@@ -19,11 +21,9 @@ export const handler = async () => {
     const sqlPath = path.resolve(process.cwd(), 'supabase', 'ensure_tables.sql');
     const sqlText = await fs.readFile(sqlPath, 'utf8');
 
-    const sql = neon(); // uses NETLIFY_DATABASE_URL automatically
-
-    // Run the full SQL. neon exposes a .query() method on the client which accepts raw SQL.
-    // (If your version of @netlify/neon differs, adjust accordingly.)
-    const result = await sql.query(sqlText);
+  const sql = createClient({ connectionString: process.env.NETLIFY_DATABASE_URL });
+  // Run the full SQL using a simple query
+  const result = await sql.query(sqlText);
 
     return { statusCode: 200, body: JSON.stringify({ ok: true, result }) };
   } catch (err) {
