@@ -420,7 +420,7 @@ var MemStorage = class {
 var SupabaseStorage = class {
   async getCustomers() {
     if (!supabase) return [];
-    const { data, error } = await supabase.from("customers").select("*").order("createdAt", { ascending: false });
+    const { data, error } = await supabase.from("customers").select("*").order("created_at", { ascending: false });
     if (error) throw error;
     return data;
   }
@@ -431,7 +431,13 @@ var SupabaseStorage = class {
   }
   async createCustomer(customer) {
     if (!supabase) throw new Error("Supabase not initialized");
-    const payload = { ...customer, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+    const payload = {
+      name: customer.name,
+      phone: customer.phone ?? null,
+      business_name: customer.businessName ?? customer.business_name ?? null,
+      location: customer.location ?? null,
+      created_at: (/* @__PURE__ */ new Date()).toISOString()
+    };
     const { data, error } = await supabase.from("customers").insert(payload).select().limit(1);
     if (error) throw error;
     return data[0];
@@ -451,7 +457,7 @@ var SupabaseStorage = class {
   // Inventory
   async getInventoryMovements() {
     if (!supabase) return [];
-    const { data, error } = await supabase.from("inventory_movements").select("*").order("createdAt", { ascending: false });
+    const { data, error } = await supabase.from("inventory_movements").select("*").order("created_at", { ascending: false });
     if (error) throw error;
     return data;
   }
@@ -462,7 +468,13 @@ var SupabaseStorage = class {
   }
   async createInventoryMovement(movement) {
     if (!supabase) throw new Error("Supabase not initialized");
-    const payload = { ...movement, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+    const payload = {
+      type: movement.type,
+      quantity: movement.quantity,
+      balance: movement.balance ?? null,
+      note: movement.note ?? null,
+      created_at: (/* @__PURE__ */ new Date()).toISOString()
+    };
     const { data, error } = await supabase.from("inventory_movements").insert(payload).select().limit(1);
     if (error) throw error;
     return data[0];
@@ -487,7 +499,7 @@ var SupabaseStorage = class {
   // Sales
   async getSales() {
     if (!supabase) return [];
-    const { data, error } = await supabase.from("sales").select("*").order("createdAt", { ascending: false });
+    const { data, error } = await supabase.from("sales").select("*").order("created_at", { ascending: false });
     if (error) throw error;
     return data;
   }
@@ -498,7 +510,15 @@ var SupabaseStorage = class {
   }
   async createSale(sale) {
     if (!supabase) throw new Error("Supabase not initialized");
-    const payload = { ...sale, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+    const payload = {
+      customer_id: sale.customerId ?? sale.customer_id ?? null,
+      customer_name: sale.customerName ?? sale.customer_name ?? null,
+      quantity: Number(sale.quantity),
+      price_per_unit: typeof sale.pricePerUnit === "number" ? sale.pricePerUnit : Number(sale.pricePerUnit),
+      total_price: typeof sale.totalPrice === "number" ? sale.totalPrice : Number(sale.pricePerUnit) * Number(sale.quantity),
+      status: sale.status ?? "completed",
+      created_at: (/* @__PURE__ */ new Date()).toISOString()
+    };
     const { data, error } = await supabase.from("sales").insert(payload).select().limit(1);
     if (error) throw error;
     await this.createInventoryMovement({ type: "sale", quantity: sale.quantity, note: `Sale to ${sale.customerName || "Customer"}`, balance: null });
@@ -529,13 +549,17 @@ var SupabaseStorage = class {
   }
   async createExpenseCategory(category) {
     if (!supabase) throw new Error("Supabase not initialized");
-    const { data, error } = await supabase.from("expense_categories").insert({ ...category, createdAt: (/* @__PURE__ */ new Date()).toISOString() }).select().limit(1);
+    const payload = { name: category.name, color: category.color ?? null, created_at: (/* @__PURE__ */ new Date()).toISOString() };
+    const { data, error } = await supabase.from("expense_categories").insert(payload).select().limit(1);
     if (error) throw error;
     return data[0];
   }
   async updateExpenseCategory(id, category) {
     if (!supabase) return void 0;
-    const { data, error } = await supabase.from("expense_categories").update(category).eq("id", id).select().limit(1);
+    const mapped = { ...category };
+    if (category.name !== void 0) mapped.name = category.name;
+    if (category.color !== void 0) mapped.color = category.color;
+    const { data, error } = await supabase.from("expense_categories").update(mapped).eq("id", id).select().limit(1);
     if (error) throw error;
     return data && data[0] || void 0;
   }
@@ -557,13 +581,20 @@ var SupabaseStorage = class {
   }
   async createExpense(expense) {
     if (!supabase) throw new Error("Supabase not initialized");
-    const { data, error } = await supabase.from("expenses").insert({ ...expense, createdAt: (/* @__PURE__ */ new Date()).toISOString() }).select().limit(1);
+    const payload = { category_id: expense.categoryId ?? expense.category_id ?? null, amount: typeof expense.amount === "number" ? expense.amount : Number(expense.amount), description: expense.description, notes: expense.notes ?? null, status: expense.status ?? "approved", created_at: (/* @__PURE__ */ new Date()).toISOString() };
+    const { data, error } = await supabase.from("expenses").insert(payload).select().limit(1);
     if (error) throw error;
     return data[0];
   }
   async updateExpense(id, expense) {
     if (!supabase) return void 0;
-    const { data, error } = await supabase.from("expenses").update(expense).eq("id", id).select().limit(1);
+    const mapped = {};
+    if (expense.categoryId !== void 0) mapped.category_id = expense.categoryId;
+    if (expense.description !== void 0) mapped.description = expense.description;
+    if (expense.notes !== void 0) mapped.notes = expense.notes;
+    if (expense.status !== void 0) mapped.status = expense.status;
+    if (expense.amount !== void 0) mapped.amount = typeof expense.amount === "number" ? expense.amount : Number(expense.amount);
+    const { data, error } = await supabase.from("expenses").update(mapped).eq("id", id).select().limit(1);
     if (error) throw error;
     return data && data[0] || void 0;
   }
@@ -576,7 +607,7 @@ var SupabaseStorage = class {
   // Ingredients
   async getIngredients() {
     if (!supabase) return [];
-    const { data } = await supabase.from("ingredients").select("*").order("createdAt", { ascending: false });
+    const { data } = await supabase.from("ingredients").select("*").order("created_at", { ascending: false });
     return data;
   }
   async getIngredient(id) {
@@ -586,13 +617,18 @@ var SupabaseStorage = class {
   }
   async createIngredient(ingredient) {
     if (!supabase) throw new Error("Supabase not initialized");
-    const { data, error } = await supabase.from("ingredients").insert({ ...ingredient, createdAt: (/* @__PURE__ */ new Date()).toISOString() }).select().limit(1);
+    const payload = { name: ingredient.name, multiplier: typeof ingredient.multiplier === "number" ? ingredient.multiplier : Number(ingredient.multiplier), unit: ingredient.unit ?? "g", created_at: (/* @__PURE__ */ new Date()).toISOString() };
+    const { data, error } = await supabase.from("ingredients").insert(payload).select().limit(1);
     if (error) throw error;
     return data[0];
   }
   async updateIngredient(id, ingredient) {
     if (!supabase) return void 0;
-    const { data, error } = await supabase.from("ingredients").update(ingredient).eq("id", id).select().limit(1);
+    const mapped = {};
+    if (ingredient.name !== void 0) mapped.name = ingredient.name;
+    if (ingredient.unit !== void 0) mapped.unit = ingredient.unit;
+    if (ingredient.multiplier !== void 0) mapped.multiplier = typeof ingredient.multiplier === "number" ? ingredient.multiplier : Number(ingredient.multiplier);
+    const { data, error } = await supabase.from("ingredients").update(mapped).eq("id", id).select().limit(1);
     if (error) throw error;
     return data && data[0] || void 0;
   }
