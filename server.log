@@ -1,0 +1,10 @@
+Database not configured (NETLIFY_DATABASE_URL or DATABASE_URL missing)
+7:26:24 PM [express] serving on port 5000
+REQ POST /api/customers (content-type: application/json)
+7:27:01 PM [express] POST /api/customers 201 in 6ms :: {"id":1759692421443,"name":"MIGRATION TEST","…
+REQ POST /api/expenses (content-type: application/json)
+Creating expense, body before validation: {"categoryId":1,"amount":12.5,"description":"smoke test"}
+7:27:01 PM [express] POST /api/expenses 201 in 2ms :: {"id":1759692421454,"categoryId":1,"amount":12…
+REQ POST /api/sales (content-type: application/json)
+POST /api/sales body: {"customerId":1759692421443,"customerName":"MIGRATION TEST","quantity":1,"pricePerUnit":10}
+7:27:01 PM [express] POST /api/sales 201 in 3ms :: {"id":1759692421458,"customerId":1759692421443,"c…

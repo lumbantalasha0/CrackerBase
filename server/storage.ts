@@ -1,66 +1,58 @@
-import { 
-  type Customer, type InsertCustomer,
-  type InventoryMovement, type InsertInventoryMovement,
-  type Sale, type InsertSale,
-  type ExpenseCategory, type InsertExpenseCategory,
-  type Expense, type InsertExpense,
-  type Ingredient, type InsertIngredient,
-  type Setting
-} from "@shared/schema";
-import fs from "fs";
-import path from "path";
-import { promisify } from "util";
-import { fileURLToPath } from "url";
-const writeFile = promisify(fs.writeFile);
-const readFile = promisify(fs.readFile);
-const mkdir = promisify(fs.mkdir);
+import fs from 'fs';
+import path from 'path';
+import { dbQuery, dbEnabled } from './supabase';
+import {
+  InsertCustomer,
+  InsertInventoryMovement,
+  InsertSale,
+  InsertExpenseCategory,
+  InsertExpense,
+  InsertIngredient,
+} from './schema';
 
-// optional Firestore integration (server-side)
-import { supabase, supabaseEnabled } from './supabase';
-
-// Storage interface for all business entities
+// Minimal IStorage interface used by the server. Methods return broad types to keep the
+// implementation simple while TypeScript types originate from `server/schema.ts`.
 export interface IStorage {
   // Customers
-  getCustomers(): Promise<Customer[]>;
-  getCustomer(id: number): Promise<Customer | undefined>;
-  createCustomer(customer: InsertCustomer): Promise<Customer>;
-  updateCustomer(id: number, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
+  getCustomers(): Promise<any[]>;
+  getCustomer(id: number): Promise<any | undefined>;
+  createCustomer(customer: InsertCustomer): Promise<any>;
+  updateCustomer(id: number, customer: Partial<InsertCustomer>): Promise<any | undefined>;
   deleteCustomer(id: number): Promise<boolean>;
 
   // Inventory
-  getInventoryMovements(): Promise<InventoryMovement[]>;
-  getInventoryMovement(id: number): Promise<InventoryMovement | undefined>;
-  createInventoryMovement(movement: InsertInventoryMovement): Promise<InventoryMovement>;
+  getInventoryMovements(): Promise<any[]>;
+  getInventoryMovement(id: number): Promise<any | undefined>;
+  createInventoryMovement(movement: InsertInventoryMovement): Promise<any>;
   getCurrentStock(): Promise<number>;
-  updateInventoryMovement(id: number, movement: Partial<InsertInventoryMovement>): Promise<InventoryMovement | undefined>;
+  updateInventoryMovement(id: number, movement: Partial<InsertInventoryMovement>): Promise<any | undefined>;
   deleteInventoryMovement(id: number): Promise<boolean>;
 
   // Sales
-  getSales(): Promise<Sale[]>;
-  getSale(id: number): Promise<Sale | undefined>;
-  createSale(sale: InsertSale): Promise<Sale>;
-  updateSale(id: number, sale: Partial<InsertSale>): Promise<Sale | undefined>;
+  getSales(): Promise<any[]>;
+  getSale(id: number): Promise<any | undefined>;
+  createSale(sale: InsertSale): Promise<any>;
+  updateSale(id: number, sale: Partial<InsertSale>): Promise<any | undefined>;
   deleteSale(id: number): Promise<boolean>;
 
-  // Expense Categories
-  getExpenseCategories(): Promise<ExpenseCategory[]>;
-  getExpenseCategory(id: number): Promise<ExpenseCategory | undefined>;
-  createExpenseCategory(category: InsertExpenseCategory): Promise<ExpenseCategory>;
-  updateExpenseCategory(id: number, category: Partial<InsertExpenseCategory>): Promise<ExpenseCategory | undefined>;
+  // Expense categories & expenses
+  getExpenseCategories(): Promise<any[]>;
+  getExpenseCategory(id: number): Promise<any | undefined>;
+  createExpenseCategory(category: InsertExpenseCategory): Promise<any>;
+  updateExpenseCategory(id: number, category: Partial<InsertExpenseCategory>): Promise<any | undefined>;
   deleteExpenseCategory(id: number): Promise<boolean>;
 
-  // Expenses
-  getExpenses(): Promise<Expense[]>;
-  getExpense(id: number): Promise<Expense | undefined>;
-  createExpense(expense: InsertExpense): Promise<Expense>;
-  updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
+  getExpenses(): Promise<any[]>;
+  getExpense(id: number): Promise<any | undefined>;
+  createExpense(expense: InsertExpense): Promise<any>;
+  updateExpense(id: number, expense: Partial<InsertExpense>): Promise<any | undefined>;
   deleteExpense(id: number): Promise<boolean>;
 
   // Ingredients
-  getIngredients(): Promise<Ingredient[]>;
-  getIngredient(id: number): Promise<Ingredient | undefined>;
-  createIngredient(ingredient: InsertIngredient): Promise<Ingredient>;
-  updateIngredient(id: number, ingredient: Partial<InsertIngredient>): Promise<Ingredient | undefined>;
+  getIngredients(): Promise<any[]>;
+  getIngredient(id: number): Promise<any | undefined>;
+  createIngredient(ingredient: InsertIngredient): Promise<any>;
+  updateIngredient(id: number, ingredient: Partial<InsertIngredient>): Promise<any | undefined>;
   deleteIngredient(id: number): Promise<boolean>;
 
   // Settings
@@ -68,618 +60,256 @@ export interface IStorage {
   setSetting(key: string, value: string): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private customers: Map<number, Customer> = new Map();
-  private inventoryMovements: Map<number, InventoryMovement> = new Map();
-  private sales: Map<number, Sale> = new Map();
-  private expenseCategories: Map<number, ExpenseCategory> = new Map();
-  private expenses: Map<number, Expense> = new Map();
-  private ingredients: Map<number, Ingredient> = new Map();
-  private settings: Map<string, string> = new Map();
-  
-  private nextCustomerId = 1;
-  private nextInventoryId = 1;
-  private nextSaleId = 1;
-  private nextExpenseCategoryId = 1;
-  private nextExpenseId = 1;
-  private nextIngredientId = 1;
-
-  // file persistence
-  private dataDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'data');
-  private dataFile = path.join(this.dataDir, 'storage.json');
+// Simple in-memory fallback storage used when no database is configured.
+class MemStorage implements IStorage {
+  private filePath = path.resolve(process.cwd(), 'data', 'storage.json');
+  private data: any = null;
 
   constructor() {
-    // attempt to load persisted data; if none exists, initialize defaults and persist
-    this.loadFromDisk().then((loaded) => {
-      if (!loaded) {
-        this.initializeDefaultData();
-        // best-effort persist
-        this.saveToDisk().catch(() => {});
+    this.load();
+  }
+
+  private load() {
+    try {
+      if (fs.existsSync(this.filePath)) {
+        const raw = fs.readFileSync(this.filePath, 'utf8') || '{}';
+        this.data = JSON.parse(raw);
+      } else {
+        this.data = { customers: [], sales: [], expenses: [], inventoryMovements: [], ingredients: [], expenseCategories: [], settings: {} };
       }
-    }).catch(() => {
-      // fallback to defaults on any read error
-      this.initializeDefaultData();
-      this.saveToDisk().catch(() => {});
-    });
-  }
-
-  private async ensureDataDir() {
-    try {
-      await mkdir(this.dataDir, { recursive: true });
     } catch (e) {
-      // ignore
+      this.data = { customers: [], sales: [], expenses: [], inventoryMovements: [], ingredients: [], expenseCategories: [], settings: {} };
     }
   }
 
-  private async saveToDisk() {
+  private save() {
     try {
-      await this.ensureDataDir();
-      const payload = {
-        nextIds: {
-          nextCustomerId: this.nextCustomerId,
-          nextInventoryId: this.nextInventoryId,
-          nextSaleId: this.nextSaleId,
-          nextExpenseCategoryId: this.nextExpenseCategoryId,
-          nextExpenseId: this.nextExpenseId,
-          nextIngredientId: this.nextIngredientId,
-        },
-        customers: Array.from(this.customers.values()),
-        inventoryMovements: Array.from(this.inventoryMovements.values()),
-        sales: Array.from(this.sales.values()),
-        expenseCategories: Array.from(this.expenseCategories.values()),
-        expenses: Array.from(this.expenses.values()),
-        ingredients: Array.from(this.ingredients.values()),
-        settings: Array.from(this.settings.entries()),
-      };
-      await writeFile(this.dataFile, JSON.stringify(payload, null, 2), 'utf8');
+      fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
+      fs.writeFileSync(this.filePath, JSON.stringify(this.data, null, 2), 'utf8');
     } catch (e) {
-      // swallow write errors but log
-      // console.error('Failed to save storage to disk', e);
+      // ignore save errors for fallback storage
     }
-  }
-
-  private async loadFromDisk(): Promise<boolean> {
-    try {
-      const content = await readFile(this.dataFile, 'utf8');
-      const parsed = JSON.parse(content);
-      if (parsed && typeof parsed === 'object') {
-        const ids = parsed.nextIds || {};
-        this.nextCustomerId = ids.nextCustomerId ?? this.nextCustomerId;
-        this.nextInventoryId = ids.nextInventoryId ?? this.nextInventoryId;
-        this.nextSaleId = ids.nextSaleId ?? this.nextSaleId;
-        this.nextExpenseCategoryId = ids.nextExpenseCategoryId ?? this.nextExpenseCategoryId;
-        this.nextExpenseId = ids.nextExpenseId ?? this.nextExpenseId;
-        this.nextIngredientId = ids.nextIngredientId ?? this.nextIngredientId;
-
-        const loadArrayToMap = (arr: any[] = [], map: Map<number, any>, key = 'id') => {
-          for (const item of arr) {
-            if (item && item[key] !== undefined) {
-              map.set(item[key], item);
-            }
-          }
-        };
-
-        loadArrayToMap(parsed.customers, this.customers);
-        loadArrayToMap(parsed.inventoryMovements, this.inventoryMovements);
-        loadArrayToMap(parsed.sales, this.sales);
-        loadArrayToMap(parsed.expenseCategories, this.expenseCategories);
-        loadArrayToMap(parsed.expenses, this.expenses);
-        loadArrayToMap(parsed.ingredients, this.ingredients);
-
-        if (Array.isArray(parsed.settings)) {
-          for (const [k, v] of parsed.settings) {
-            this.settings.set(k, v);
-          }
-        }
-        return true;
-      }
-      return false;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  private initializeDefaultData() {
-    // Default expense categories
-    this.createExpenseCategory({ name: "Raw Materials", color: "blue" });
-    this.createExpenseCategory({ name: "Utilities", color: "green" });
-    this.createExpenseCategory({ name: "Transportation", color: "orange" });
-    this.createExpenseCategory({ name: "Marketing", color: "purple" });
-
-    // Default ingredients
-    this.createIngredient({ name: "Salt", multiplier: 0.02, unit: "g" });
-    this.createIngredient({ name: "Sugar", multiplier: 0.05, unit: "g" });
-    this.createIngredient({ name: "Oil", multiplier: 0.15, unit: "ml" });
-    this.createIngredient({ name: "Baking Powder", multiplier: 0.01, unit: "g" });
-    this.createIngredient({ name: "Water", multiplier: 0.4, unit: "ml" });
-
-    // Default customers
-    this.createCustomer({ name: "ABC Restaurant", phone: "+260 123 456 789", businessName: "ABC Restaurant Ltd", location: "Lusaka" });
-    this.createCustomer({ name: "John Doe", phone: "+260 987 654 321", businessName: "Corner Store", location: "Ndola" });
-
-    // Initialize with some stock
-    this.createInventoryMovement({ type: "addition", quantity: 1250, note: "Initial stock" });
   }
 
   // Customers
-  async getCustomers(): Promise<Customer[]> {
-    return Array.from(this.customers.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
-
-  async getCustomer(id: number): Promise<Customer | undefined> {
-    return this.customers.get(id);
-  }
-
-  async createCustomer(customer: InsertCustomer): Promise<Customer> {
-    const id = this.nextCustomerId++;
-    const newCustomer: Customer = {
-      id,
-      name: customer.name,
-      phone: customer.phone ?? null,
-      businessName: customer.businessName ?? null,
-      location: customer.location ?? null,
-      createdAt: new Date(),
-    };
-    this.customers.set(id, newCustomer);
-    // persist
-    this.saveToDisk().catch(() => {});
-    return newCustomer;
-  }
-
-  async updateCustomer(id: number, customer: Partial<InsertCustomer>): Promise<Customer | undefined> {
-    const existing = this.customers.get(id);
-    if (!existing) return undefined;
-    
-    const updated = { ...existing, ...customer };
-    this.customers.set(id, updated);
-    // persist
-    this.saveToDisk().catch(() => {});
-    return updated;
-  }
-
-  async deleteCustomer(id: number): Promise<boolean> {
-    const ok = this.customers.delete(id);
-    this.saveToDisk().catch(() => {});
-    return ok;
-  }
+  async getCustomers() { return this.data.customers || []; }
+  async getCustomer(id: number) { return (this.data.customers || []).find((c: any) => c.id === id); }
+  async createCustomer(customer: InsertCustomer) { const id = Date.now(); const rec = { id, ...customer, createdAt: new Date().toISOString() }; (this.data.customers ||= []).unshift(rec); this.save(); return rec; }
+  async updateCustomer(id: number, customer: Partial<InsertCustomer>) { const idx = (this.data.customers || []).findIndex((c: any) => c.id === id); if (idx === -1) return undefined; this.data.customers[idx] = { ...this.data.customers[idx], ...customer }; this.save(); return this.data.customers[idx]; }
+  async deleteCustomer(id: number) { this.data.customers = (this.data.customers || []).filter((c: any) => c.id !== id); this.save(); return true; }
 
   // Inventory
-  async getInventoryMovements(): Promise<InventoryMovement[]> {
-    return Array.from(this.inventoryMovements.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
-
-  async getInventoryMovement(id: number): Promise<InventoryMovement | undefined> {
-    return this.inventoryMovements.get(id);
-  }
-
-  async createInventoryMovement(movement: InsertInventoryMovement): Promise<InventoryMovement> {
-    const id = this.nextInventoryId++;
-    const currentStock = await this.getCurrentStock();
-    
-    let newBalance: number;
-    if (movement.type === "addition") {
-      newBalance = currentStock + movement.quantity;
-    } else {
-      newBalance = currentStock - movement.quantity;
-    }
-    
-    const newMovement: InventoryMovement = {
-      id,
-      type: movement.type,
-      quantity: movement.quantity,
-      balance: newBalance,
-      note: movement.note ?? null,
-      createdAt: new Date(),
-    };
-    this.inventoryMovements.set(id, newMovement);
-    this.saveToDisk().catch(() => {});
-    return newMovement;
-  }
-
-  async getCurrentStock(): Promise<number> {
-    const movements = await this.getInventoryMovements();
-    if (movements.length === 0) return 0;
-    
-    // Return the balance from the most recent movement
-    return movements[0].balance;
-  }
-
-  async updateInventoryMovement(id: number, movement: Partial<InsertInventoryMovement>): Promise<InventoryMovement | undefined> {
-    const existing = this.inventoryMovements.get(id);
-    if (!existing) return undefined;
-    
-    const updated = { ...existing, ...movement };
-    this.inventoryMovements.set(id, updated);
-    this.saveToDisk().catch(() => {});
-    return updated;
-  }
-
-  async deleteInventoryMovement(id: number): Promise<boolean> {
-    const ok = this.inventoryMovements.delete(id);
-    this.saveToDisk().catch(() => {});
-    return ok;
-  }
+  async getInventoryMovements() { return this.data.inventoryMovements || []; }
+  async getInventoryMovement(id: number) { return (this.data.inventoryMovements || []).find((m: any) => m.id === id); }
+  async createInventoryMovement(movement: InsertInventoryMovement) { const id = Date.now(); const rec = { id, ...movement, createdAt: new Date().toISOString() }; (this.data.inventoryMovements ||= []).unshift(rec); this.save(); return rec; }
+  async getCurrentStock() { const last = (this.data.inventoryMovements || [])[0]; return last ? Number(last.balance || 0) : 0; }
+  async updateInventoryMovement(id: number, movement: Partial<InsertInventoryMovement>) { const idx = (this.data.inventoryMovements || []).findIndex((m: any) => m.id === id); if (idx === -1) return undefined; this.data.inventoryMovements[idx] = { ...this.data.inventoryMovements[idx], ...movement }; this.save(); return this.data.inventoryMovements[idx]; }
+  async deleteInventoryMovement(id: number) { this.data.inventoryMovements = (this.data.inventoryMovements || []).filter((m: any) => m.id !== id); this.save(); return true; }
 
   // Sales
-  async getSales(): Promise<Sale[]> {
-    return Array.from(this.sales.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
+  async getSales() { return this.data.sales || []; }
+  async getSale(id: number) { return (this.data.sales || []).find((s: any) => s.id === id); }
+  async createSale(sale: InsertSale) { const id = Date.now(); const rec = { id, ...sale, createdAt: new Date().toISOString() }; (this.data.sales ||= []).unshift(rec); // create movement
+    try { (this.data.inventoryMovements ||= []).unshift({ id: Date.now()+1, type: 'sale', quantity: sale.quantity, balance: null, note: `Sale to ${sale.customerId ?? 'Customer'}`, createdAt: new Date().toISOString() }); } catch(e){}
+    this.save(); return rec; }
+  async updateSale(id: number, sale: Partial<InsertSale>) { const idx = (this.data.sales || []).findIndex((s: any) => s.id === id); if (idx === -1) return undefined; this.data.sales[idx] = { ...this.data.sales[idx], ...sale }; this.save(); return this.data.sales[idx]; }
+  async deleteSale(id: number) { this.data.sales = (this.data.sales || []).filter((s: any) => s.id !== id); this.save(); return true; }
 
-  async getSale(id: number): Promise<Sale | undefined> {
-    return this.sales.get(id);
-  }
-
-  async createSale(sale: InsertSale): Promise<Sale> {
-    const id = this.nextSaleId++;
-    const pricePerUnit = typeof sale.pricePerUnit === 'number' ? sale.pricePerUnit : Number(sale.pricePerUnit);
-    const totalPrice = pricePerUnit * sale.quantity;
-    
-    const newSale: Sale = {
-      id,
-      customerId: sale.customerId ?? null,
-      customerName: sale.customerName ?? null,
-      quantity: sale.quantity,
-      pricePerUnit: pricePerUnit.toString(),
-      totalPrice: totalPrice.toString(),
-      status: sale.status ?? "completed",
-      createdAt: new Date(),
-    };
-    this.sales.set(id, newSale);
-    
-    // Create inventory movement for sale
-    await this.createInventoryMovement({
-      type: "sale",
-      quantity: sale.quantity,
-      note: `Sale to ${sale.customerName || 'Customer'}`,
-    });
-    this.saveToDisk().catch(() => {});
-    
-    return newSale;
-  }
-
-  async updateSale(id: number, sale: Partial<InsertSale>): Promise<Sale | undefined> {
-    const existing = this.sales.get(id);
-    if (!existing) return undefined;
-    
-    const updated = { ...existing };
-    if (sale.customerId !== undefined) updated.customerId = sale.customerId ?? null;
-    if (sale.customerName !== undefined) updated.customerName = sale.customerName ?? null;
-    if (sale.quantity !== undefined) updated.quantity = sale.quantity;
-    if (sale.status !== undefined) updated.status = sale.status;
-    
-    if (sale.pricePerUnit !== undefined) {
-      const pricePerUnit = typeof sale.pricePerUnit === 'number' ? sale.pricePerUnit : Number(sale.pricePerUnit);
-      updated.pricePerUnit = pricePerUnit.toString();
-      updated.totalPrice = (pricePerUnit * updated.quantity).toString();
-    } else if (sale.quantity !== undefined) {
-      const pricePerUnit = Number(existing.pricePerUnit);
-      updated.totalPrice = (pricePerUnit * sale.quantity).toString();
-    }
-    
-    this.sales.set(id, updated);
-    this.saveToDisk().catch(() => {});
-    return updated;
-  }
-
-  async deleteSale(id: number): Promise<boolean> {
-    const ok = this.sales.delete(id);
-    this.saveToDisk().catch(() => {});
-    return ok;
-  }
-
-  // Expense Categories
-  async getExpenseCategories(): Promise<ExpenseCategory[]> {
-    return Array.from(this.expenseCategories.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
-
-  async getExpenseCategory(id: number): Promise<ExpenseCategory | undefined> {
-    return this.expenseCategories.get(id);
-  }
-
-  async createExpenseCategory(category: InsertExpenseCategory): Promise<ExpenseCategory> {
-    const id = this.nextExpenseCategoryId++;
-    const newCategory: ExpenseCategory = {
-      ...category,
-      id,
-      createdAt: new Date(),
-    };
-    this.expenseCategories.set(id, newCategory);
-    this.saveToDisk().catch(() => {});
-    return newCategory;
-  }
-
-  async updateExpenseCategory(id: number, category: Partial<InsertExpenseCategory>): Promise<ExpenseCategory | undefined> {
-    const existing = this.expenseCategories.get(id);
-    if (!existing) return undefined;
-    
-    const updated = { ...existing, ...category };
-    this.expenseCategories.set(id, updated);
-    this.saveToDisk().catch(() => {});
-    return updated;
-  }
-
-  async deleteExpenseCategory(id: number): Promise<boolean> {
-    const ok = this.expenseCategories.delete(id);
-    this.saveToDisk().catch(() => {});
-    return ok;
-  }
+  // Expense categories
+  async getExpenseCategories() { return this.data.expenseCategories || []; }
+  async getExpenseCategory(id: number) { return (this.data.expenseCategories || []).find((c: any) => c.id === id); }
+  async createExpenseCategory(category: InsertExpenseCategory) { const id = Date.now(); const rec = { id, ...category, createdAt: new Date().toISOString() }; (this.data.expenseCategories ||= []).push(rec); this.save(); return rec; }
+  async updateExpenseCategory(id: number, category: Partial<InsertExpenseCategory>) { const idx = (this.data.expenseCategories || []).findIndex((c: any) => c.id === id); if (idx === -1) return undefined; this.data.expenseCategories[idx] = { ...this.data.expenseCategories[idx], ...category }; this.save(); return this.data.expenseCategories[idx]; }
+  async deleteExpenseCategory(id: number) { this.data.expenseCategories = (this.data.expenseCategories || []).filter((c: any) => c.id !== id); this.save(); return true; }
 
   // Expenses
-  async getExpenses(): Promise<Expense[]> {
-    return Array.from(this.expenses.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
-
-  async getExpense(id: number): Promise<Expense | undefined> {
-    return this.expenses.get(id);
-  }
-
-  async createExpense(expense: InsertExpense): Promise<Expense> {
-    const id = this.nextExpenseId++;
-    const amount = typeof expense.amount === 'number' ? expense.amount : Number(expense.amount);
-    
-    const newExpense: Expense = {
-      id,
-      categoryId: expense.categoryId ?? null,
-      amount: amount.toString(),
-      description: expense.description,
-      notes: expense.notes ?? null,
-      status: expense.status ?? "approved",
-      createdAt: new Date(),
-    };
-    this.expenses.set(id, newExpense);
-    this.saveToDisk().catch(() => {});
-    return newExpense;
-  }
-
-  async updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined> {
-    const existing = this.expenses.get(id);
-    if (!existing) return undefined;
-    
-    const updated = { ...existing };
-    if (expense.categoryId !== undefined) updated.categoryId = expense.categoryId ?? null;
-    if (expense.description !== undefined) updated.description = expense.description;
-    if (expense.notes !== undefined) updated.notes = expense.notes ?? null;
-    if (expense.status !== undefined) updated.status = expense.status;
-    if (expense.amount !== undefined) {
-      const amount = typeof expense.amount === 'number' ? expense.amount : Number(expense.amount);
-      updated.amount = amount.toString();
-    }
-    
-    this.expenses.set(id, updated);
-    this.saveToDisk().catch(() => {});
-    return updated;
-  }
-
-  async deleteExpense(id: number): Promise<boolean> {
-    const ok = this.expenses.delete(id);
-    this.saveToDisk().catch(() => {});
-    return ok;
-  }
+  async getExpenses() { return this.data.expenses || []; }
+  async getExpense(id: number) { return (this.data.expenses || []).find((e: any) => e.id === id); }
+  async createExpense(expense: InsertExpense) { const id = Date.now(); const rec = { id, ...expense, createdAt: new Date().toISOString() }; (this.data.expenses ||= []).unshift(rec); this.save(); return rec; }
+  async updateExpense(id: number, expense: Partial<InsertExpense>) { const idx = (this.data.expenses || []).findIndex((e: any) => e.id === id); if (idx === -1) return undefined; this.data.expenses[idx] = { ...this.data.expenses[idx], ...expense }; this.save(); return this.data.expenses[idx]; }
+  async deleteExpense(id: number) { this.data.expenses = (this.data.expenses || []).filter((e: any) => e.id !== id); this.save(); return true; }
 
   // Ingredients
-  async getIngredients(): Promise<Ingredient[]> {
-    return Array.from(this.ingredients.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }
-
-  async getIngredient(id: number): Promise<Ingredient | undefined> {
-    return this.ingredients.get(id);
-  }
-
-  async createIngredient(ingredient: InsertIngredient): Promise<Ingredient> {
-    const id = this.nextIngredientId++;
-    const multiplier = typeof ingredient.multiplier === 'number' ? ingredient.multiplier : Number(ingredient.multiplier);
-    
-    const newIngredient: Ingredient = {
-      id,
-      name: ingredient.name,
-      multiplier: multiplier.toString(),
-      unit: ingredient.unit ?? "g",
-      createdAt: new Date(),
-    };
-    this.ingredients.set(id, newIngredient);
-    this.saveToDisk().catch(() => {});
-    return newIngredient;
-  }
-
-  async updateIngredient(id: number, ingredient: Partial<InsertIngredient>): Promise<Ingredient | undefined> {
-    const existing = this.ingredients.get(id);
-    if (!existing) return undefined;
-    
-    const updated = { ...existing };
-    if (ingredient.name !== undefined) updated.name = ingredient.name;
-    if (ingredient.unit !== undefined) updated.unit = ingredient.unit;
-    if (ingredient.multiplier !== undefined) {
-      const multiplier = typeof ingredient.multiplier === 'number' ? ingredient.multiplier : Number(ingredient.multiplier);
-      updated.multiplier = multiplier.toString();
-    }
-    
-    this.ingredients.set(id, updated);
-    this.saveToDisk().catch(() => {});
-    return updated;
-  }
-
-  async deleteIngredient(id: number): Promise<boolean> {
-    const ok = this.ingredients.delete(id);
-    this.saveToDisk().catch(() => {});
-    return ok;
-  }
+  async getIngredients() { return this.data.ingredients || []; }
+  async getIngredient(id: number) { return (this.data.ingredients || []).find((i: any) => i.id === id); }
+  async createIngredient(ingredient: InsertIngredient) { const id = Date.now(); const rec = { id, ...ingredient, createdAt: new Date().toISOString() }; (this.data.ingredients ||= []).unshift(rec); this.save(); return rec; }
+  async updateIngredient(id: number, ingredient: Partial<InsertIngredient>) { const idx = (this.data.ingredients || []).findIndex((i: any) => i.id === id); if (idx === -1) return undefined; this.data.ingredients[idx] = { ...this.data.ingredients[idx], ...ingredient }; this.save(); return this.data.ingredients[idx]; }
+  async deleteIngredient(id: number) { this.data.ingredients = (this.data.ingredients || []).filter((i: any) => i.id !== id); this.save(); return true; }
 
   // Settings
-  async getSetting(key: string): Promise<string | undefined> {
-    return this.settings.get(key);
-  }
-
-  async setSetting(key: string, value: string): Promise<void> {
-    this.settings.set(key, value);
-    this.saveToDisk().catch(() => {});
-  }
+  async getSetting(key: string) { const s = this.data.settings || {}; return s[key]; }
+  async setSetting(key: string, value: string) { (this.data.settings ||= {})[key] = value; this.save(); }
 }
 
-// Minimal Supabase-backed storage implementation. This expects the following
-// tables to exist in Supabase: customers, inventory_movements, sales, expense_categories,
-// expenses, ingredients, settings. Each table should have structure compatible with
-// the app's types (id, createdAt, etc.). This implementation focuses on the
-// create/get flows used by the server smoke tests and API handlers.
-export class SupabaseStorage implements IStorage {
+// Postgres-backed storage implementation using dbQuery (Neon)
+export class PostgresStorage implements IStorage {
+  // Customers
   async getCustomers(): Promise<any[]> {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    return data as any[];
+    const rows = await dbQuery('SELECT * FROM public.customers ORDER BY created_at DESC', []);
+    return rows || [];
   }
 
   async getCustomer(id: number) {
-    if (!supabase) return undefined;
-    const { data } = await supabase.from('customers').select('*').eq('id', id).limit(1);
-    return (data && data[0]) || undefined;
+    const rows = await dbQuery('SELECT * FROM public.customers WHERE id = $1 LIMIT 1', [id]);
+    return (rows && rows[0]) ? rows[0] : undefined;
   }
 
-  async createCustomer(customer: any) {
-    if (!supabase) throw new Error('Supabase not initialized');
-    const payload = {
-      name: customer.name,
-      phone: customer.phone ?? null,
-      business_name: customer.businessName ?? customer.business_name ?? null,
-      location: customer.location ?? null,
-      created_at: new Date().toISOString(),
-    };
-    const { data, error } = await supabase.from('customers').insert(payload).select().limit(1);
-    if (error) throw error;
-    return data[0];
+  async createCustomer(customer: InsertCustomer) {
+    const payload = [customer.name, customer.phone ?? null, customer.businessName ?? null, customer.location ?? null, new Date().toISOString()];
+    const rows = await dbQuery('INSERT INTO public.customers (name, phone, business_name, location, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING *', payload);
+    return (rows && rows[0]) ? rows[0] : rows;
   }
 
-  async updateCustomer(id: number, customer: Partial<any>) {
-    if (!supabase) return undefined;
-    const { data, error } = await supabase.from('customers').update(customer).eq('id', id).select().limit(1);
-    if (error) throw error;
-    return (data && data[0]) || undefined;
+  async updateCustomer(id: number, customer: Partial<InsertCustomer>) {
+    const mapped: any = {};
+    if ((customer as any).name !== undefined) mapped.name = (customer as any).name;
+    if ((customer as any).phone !== undefined) mapped.phone = (customer as any).phone;
+    if ((customer as any).businessName !== undefined) mapped.business_name = (customer as any).businessName;
+    if ((customer as any).location !== undefined) mapped.location = (customer as any).location;
+    const setParts: string[] = [];
+    const params: any[] = [];
+    let idx = 1;
+    for (const k of Object.keys(mapped)) {
+      setParts.push(`${k} = $${idx}`);
+      params.push((mapped as any)[k]);
+      idx++;
+    }
+    if (setParts.length === 0) return this.getCustomer(id);
+    params.push(id);
+    const q = `UPDATE public.customers SET ${setParts.join(', ')} WHERE id = $${idx} RETURNING *`;
+    const rows = await dbQuery(q, params);
+    return (rows && rows[0]) ? rows[0] : undefined;
   }
 
   async deleteCustomer(id: number) {
-    if (!supabase) return false;
-    const { error } = await supabase.from('customers').delete().eq('id', id);
-    if (error) throw error;
+    await dbQuery('DELETE FROM public.customers WHERE id = $1', [id]);
     return true;
   }
 
   // Inventory
   async getInventoryMovements() {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from('inventory_movements').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    return data as any[];
+    const rows = await dbQuery('SELECT * FROM public.inventory_movements ORDER BY created_at DESC', []);
+    return rows || [];
   }
 
   async getInventoryMovement(id: number) {
-    if (!supabase) return undefined;
-    const { data } = await supabase.from('inventory_movements').select('*').eq('id', id).limit(1);
-    return (data && data[0]) || undefined;
+    const rows = await dbQuery('SELECT * FROM public.inventory_movements WHERE id = $1 LIMIT 1', [id]);
+    return (rows && rows[0]) ? rows[0] : undefined;
   }
 
-  async createInventoryMovement(movement: any) {
-    if (!supabase) throw new Error('Supabase not initialized');
-    const payload = {
-      type: movement.type,
-      quantity: movement.quantity,
-      balance: movement.balance ?? null,
-      note: movement.note ?? null,
-      created_at: new Date().toISOString(),
-    };
-    const { data, error } = await supabase.from('inventory_movements').insert(payload).select().limit(1);
-    if (error) throw error;
-    return data[0];
+  async createInventoryMovement(movement: InsertInventoryMovement) {
+  // movement may not include balance in the InsertInventoryMovement type; coerce safely
+  const params = [movement.type, movement.quantity, (movement as any).balance ?? null, movement.note ?? null, new Date().toISOString()];
+    const rows = await dbQuery('INSERT INTO public.inventory_movements (type, quantity, balance, note, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING *', params);
+    return (rows && rows[0]) ? rows[0] : rows;
   }
 
   async getCurrentStock() {
-    const movements = await this.getInventoryMovements();
-    if (movements.length === 0) return 0;
-    return movements[0].balance ?? 0;
+    const rows = await dbQuery('SELECT balance FROM public.inventory_movements ORDER BY created_at DESC LIMIT 1', []);
+    return (rows && rows[0] && Number(rows[0].balance)) || 0;
   }
 
-  async updateInventoryMovement(id: number, movement: Partial<any>) {
-    if (!supabase) return undefined;
-    const { data, error } = await supabase.from('inventory_movements').update(movement).eq('id', id).select().limit(1);
-    if (error) throw error;
-    return (data && data[0]) || undefined;
+  async updateInventoryMovement(id: number, movement: Partial<InsertInventoryMovement>) {
+    const mapped: any = {};
+    if ((movement as any).type !== undefined) mapped.type = (movement as any).type;
+    if ((movement as any).quantity !== undefined) mapped.quantity = (movement as any).quantity;
+    if ((movement as any).balance !== undefined) mapped.balance = (movement as any).balance;
+    if ((movement as any).note !== undefined) mapped.note = (movement as any).note;
+    const setParts: string[] = [];
+    const params: any[] = [];
+    let idx = 1;
+    for (const k of Object.keys(mapped)) {
+      setParts.push(`${k} = $${idx}`);
+      params.push((mapped as any)[k]);
+      idx++;
+    }
+    if (setParts.length === 0) return this.getInventoryMovement(id);
+    params.push(id);
+    const q = `UPDATE public.inventory_movements SET ${setParts.join(', ')} WHERE id = $${idx} RETURNING *`;
+    const rows = await dbQuery(q, params);
+    return (rows && rows[0]) ? rows[0] : undefined;
   }
 
   async deleteInventoryMovement(id: number) {
-    if (!supabase) return false;
-    const { error } = await supabase.from('inventory_movements').delete().eq('id', id);
-    if (error) throw error;
+    await dbQuery('DELETE FROM public.inventory_movements WHERE id = $1', [id]);
     return true;
   }
 
   // Sales
   async getSales() {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from('sales').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    return data as any[];
+    const rows = await dbQuery('SELECT * FROM public.sales ORDER BY created_at DESC', []);
+    return rows || [];
   }
 
   async getSale(id: number) {
-    if (!supabase) return undefined;
-    const { data } = await supabase.from('sales').select('*').eq('id', id).limit(1);
-    return (data && data[0]) || undefined;
+    const rows = await dbQuery('SELECT * FROM public.sales WHERE id = $1 LIMIT 1', [id]);
+    return (rows && rows[0]) ? rows[0] : undefined;
   }
 
-  async createSale(sale: any) {
-    if (!supabase) throw new Error('Supabase not initialized');
-    const payload = {
-      customer_id: sale.customerId ?? sale.customer_id ?? null,
-      customer_name: sale.customerName ?? sale.customer_name ?? null,
-      quantity: Number(sale.quantity),
-      price_per_unit: typeof sale.pricePerUnit === 'number' ? sale.pricePerUnit : Number(sale.pricePerUnit),
-      total_price: typeof sale.totalPrice === 'number' ? sale.totalPrice : (Number(sale.pricePerUnit) * Number(sale.quantity)),
-      status: sale.status ?? 'completed',
-      created_at: new Date().toISOString(),
-    };
-    const { data, error } = await supabase.from('sales').insert(payload).select().limit(1);
-    if (error) throw error;
-    // also create inventory movement
-    await this.createInventoryMovement({ type: 'sale', quantity: sale.quantity, note: `Sale to ${sale.customerName || 'Customer'}`, balance: null });
-    return data[0];
+  async createSale(sale: InsertSale) {
+  const params = [sale.customerId ?? null, sale.customerName ?? null, sale.quantity, (sale as any).pricePerUnit, (sale as any).totalPrice ?? (sale.quantity * (sale as any).pricePerUnit), sale.status ?? 'completed', new Date().toISOString()];
+    const rows = await dbQuery('INSERT INTO public.sales (customer_id, customer_name, quantity, price_per_unit, total_price, status, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *', params);
+    // attempt to update inventory movements; ignore errors
+    try {
+      await dbQuery('INSERT INTO public.inventory_movements (type, quantity, balance, note, created_at) VALUES ($1,$2,$3,$4,$5)', ['sale', sale.quantity, null, `Sale to ${sale.customerId ?? 'Customer'}`, new Date().toISOString()]);
+    } catch (e) {}
+    return (rows && rows[0]) ? rows[0] : rows;
   }
 
-  async updateSale(id: number, sale: Partial<any>) {
-    if (!supabase) return undefined;
-    const { data, error } = await supabase.from('sales').update(sale).eq('id', id).select().limit(1);
-    if (error) throw error;
-    return (data && data[0]) || undefined;
+  async updateSale(id: number, sale: Partial<InsertSale>) {
+    const mapped: any = {};
+    if ((sale as any).quantity !== undefined) mapped.quantity = (sale as any).quantity;
+    if ((sale as any).pricePerUnit !== undefined) mapped.price_per_unit = (sale as any).pricePerUnit;
+    if ((sale as any).totalPrice !== undefined) mapped.total_price = (sale as any).totalPrice;
+    if ((sale as any).status !== undefined) mapped.status = (sale as any).status;
+    const setParts: string[] = [];
+    const params: any[] = [];
+    let idx = 1;
+    for (const k of Object.keys(mapped)) {
+      setParts.push(`${k} = $${idx}`);
+      params.push((mapped as any)[k]);
+      idx++;
+    }
+    if (setParts.length === 0) return this.getSale(id);
+    params.push(id);
+    const q = `UPDATE public.sales SET ${setParts.join(', ')} WHERE id = $${idx} RETURNING *`;
+    const rows = await dbQuery(q, params);
+    return (rows && rows[0]) ? rows[0] : undefined;
   }
 
   async deleteSale(id: number) {
-    if (!supabase) return false;
-    const { error } = await supabase.from('sales').delete().eq('id', id);
-    if (error) throw error;
+    await dbQuery('DELETE FROM public.sales WHERE id = $1', [id]);
     return true;
   }
 
-  // Expense categories & expenses - minimal implementations
-  async getExpenseCategories() { if (!supabase) return []; const { data } = await supabase.from('expense_categories').select('*'); return data as any[]; }
-  async getExpenseCategory(id: number) { if (!supabase) return undefined; const { data } = await supabase.from('expense_categories').select('*').eq('id', id).limit(1); return (data && data[0]) || undefined; }
-  async createExpenseCategory(category: any) { if (!supabase) throw new Error('Supabase not initialized'); const payload = { name: category.name, color: category.color ?? null, created_at: new Date().toISOString() }; const { data, error } = await supabase.from('expense_categories').insert(payload).select().limit(1); if (error) throw error; return data[0]; }
-  async updateExpenseCategory(id: number, category: Partial<any>) { if (!supabase) return undefined; const mapped = { ...(category as any) }; if ((category as any).name !== undefined) mapped.name = (category as any).name; if ((category as any).color !== undefined) mapped.color = (category as any).color; const { data, error } = await supabase.from('expense_categories').update(mapped).eq('id', id).select().limit(1); if (error) throw error; return (data && data[0]) || undefined; }
-  async deleteExpenseCategory(id: number) { if (!supabase) return false; const { error } = await supabase.from('expense_categories').delete().eq('id', id); if (error) throw error; return true; }
+  // Expense categories
+  async getExpenseCategories() { const rows = await dbQuery('SELECT * FROM public.expense_categories ORDER BY id', []); return rows || []; }
+  async getExpenseCategory(id: number) { const rows = await dbQuery('SELECT * FROM public.expense_categories WHERE id = $1 LIMIT 1', [id]); return (rows && rows[0]) ? rows[0] : undefined; }
+  async createExpenseCategory(category: InsertExpenseCategory) { const rows = await dbQuery('INSERT INTO public.expense_categories (name, color, created_at) VALUES ($1,$2,$3) RETURNING *', [category.name, category.color ?? null, new Date().toISOString()]); return (rows && rows[0]) ? rows[0] : rows; }
+  async updateExpenseCategory(id: number, category: Partial<InsertExpenseCategory>) { const mapped: any = {}; if ((category as any).name !== undefined) mapped.name = (category as any).name; if ((category as any).color !== undefined) mapped.color = (category as any).color; const setParts: string[] = []; const params: any[] = []; let idx = 1; for (const k of Object.keys(mapped)) { setParts.push(`${k} = $${idx}`); params.push((mapped as any)[k]); idx++; } if (setParts.length === 0) return this.getExpenseCategory(id); params.push(id); const q = `UPDATE public.expense_categories SET ${setParts.join(', ')} WHERE id = $${idx} RETURNING *`; const rows = await dbQuery(q, params); return (rows && rows[0]) ? rows[0] : undefined; }
+  async deleteExpenseCategory(id: number) { await dbQuery('DELETE FROM public.expense_categories WHERE id = $1', [id]); return true; }
 
-  async getExpenses() { if (!supabase) return []; const { data } = await supabase.from('expenses').select('*'); return data as any[]; }
-  async getExpense(id: number) { if (!supabase) return undefined; const { data } = await supabase.from('expenses').select('*').eq('id', id).limit(1); return (data && data[0]) || undefined; }
-  async createExpense(expense: any) { if (!supabase) throw new Error('Supabase not initialized'); const payload = { category_id: expense.categoryId ?? expense.category_id ?? null, amount: typeof expense.amount === 'number' ? expense.amount : Number(expense.amount), description: expense.description, notes: expense.notes ?? null, status: expense.status ?? 'approved', created_at: new Date().toISOString() }; const { data, error } = await supabase.from('expenses').insert(payload).select().limit(1); if (error) throw error; return data[0]; }
-  async updateExpense(id: number, expense: Partial<any>) { if (!supabase) return undefined; const mapped: any = {}; if ((expense as any).categoryId !== undefined) mapped.category_id = (expense as any).categoryId; if ((expense as any).description !== undefined) mapped.description = (expense as any).description; if ((expense as any).notes !== undefined) mapped.notes = (expense as any).notes; if ((expense as any).status !== undefined) mapped.status = (expense as any).status; if ((expense as any).amount !== undefined) mapped.amount = typeof (expense as any).amount === 'number' ? (expense as any).amount : Number((expense as any).amount); const { data, error } = await supabase.from('expenses').update(mapped).eq('id', id).select().limit(1); if (error) throw error; return (data && data[0]) || undefined; }
-  async deleteExpense(id: number) { if (!supabase) return false; const { error } = await supabase.from('expenses').delete().eq('id', id); if (error) throw error; return true; }
+  // Expenses
+  async getExpenses() { const rows = await dbQuery('SELECT * FROM public.expenses ORDER BY created_at DESC', []); return rows || []; }
+  async getExpense(id: number) { const rows = await dbQuery('SELECT * FROM public.expenses WHERE id = $1 LIMIT 1', [id]); return (rows && rows[0]) ? rows[0] : undefined; }
+  async createExpense(expense: InsertExpense) { const rows = await dbQuery('INSERT INTO public.expenses (category_id, amount, description, notes, status, created_at) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *', [expense.categoryId ?? (expense as any).category_id ?? null, typeof expense.amount === 'number' ? expense.amount : Number(expense.amount), expense.description, expense.notes ?? null, expense.status ?? 'approved', new Date().toISOString()]); return (rows && rows[0]) ? rows[0] : rows; }
+  async updateExpense(id: number, expense: Partial<InsertExpense>) { const mapped: any = {}; if ((expense as any).categoryId !== undefined) mapped.category_id = (expense as any).categoryId; if ((expense as any).description !== undefined) mapped.description = (expense as any).description; if ((expense as any).notes !== undefined) mapped.notes = (expense as any).notes; if ((expense as any).status !== undefined) mapped.status = (expense as any).status; if ((expense as any).amount !== undefined) mapped.amount = typeof (expense as any).amount === 'number' ? (expense as any).amount : Number((expense as any).amount); const setParts: string[] = []; const params: any[] = []; let idx = 1; for (const k of Object.keys(mapped)) { setParts.push(`${k} = $${idx}`); params.push((mapped as any)[k]); idx++; } if (setParts.length === 0) return this.getExpense(id); params.push(id); const q = `UPDATE public.expenses SET ${setParts.join(', ')} WHERE id = $${idx} RETURNING *`; const rows = await dbQuery(q, params); return (rows && rows[0]) ? rows[0] : undefined; }
+  async deleteExpense(id: number) { await dbQuery('DELETE FROM public.expenses WHERE id = $1', [id]); return true; }
 
   // Ingredients
-  async getIngredients() { if (!supabase) return []; const { data } = await supabase.from('ingredients').select('*').order('created_at', { ascending: false }); return data as any[]; }
-  async getIngredient(id: number) { if (!supabase) return undefined; const { data } = await supabase.from('ingredients').select('*').eq('id', id).limit(1); return (data && data[0]) || undefined; }
-  async createIngredient(ingredient: any) { if (!supabase) throw new Error('Supabase not initialized'); const payload = { name: ingredient.name, multiplier: typeof ingredient.multiplier === 'number' ? ingredient.multiplier : Number(ingredient.multiplier), unit: ingredient.unit ?? 'g', created_at: new Date().toISOString() }; const { data, error } = await supabase.from('ingredients').insert(payload).select().limit(1); if (error) throw error; return data[0]; }
-  async updateIngredient(id: number, ingredient: Partial<any>) { if (!supabase) return undefined; const mapped: any = {}; if ((ingredient as any).name !== undefined) mapped.name = (ingredient as any).name; if ((ingredient as any).unit !== undefined) mapped.unit = (ingredient as any).unit; if ((ingredient as any).multiplier !== undefined) mapped.multiplier = typeof (ingredient as any).multiplier === 'number' ? (ingredient as any).multiplier : Number((ingredient as any).multiplier); const { data, error } = await supabase.from('ingredients').update(mapped).eq('id', id).select().limit(1); if (error) throw error; return (data && data[0]) || undefined; }
-  async deleteIngredient(id: number) { if (!supabase) return false; const { error } = await supabase.from('ingredients').delete().eq('id', id); if (error) throw error; return true; }
+  async getIngredients() { const rows = await dbQuery('SELECT * FROM public.ingredients ORDER BY created_at DESC', []); return rows || []; }
+  async getIngredient(id: number) { const rows = await dbQuery('SELECT * FROM public.ingredients WHERE id = $1 LIMIT 1', [id]); return (rows && rows[0]) ? rows[0] : undefined; }
+  async createIngredient(ingredient: InsertIngredient) { const rows = await dbQuery('INSERT INTO public.ingredients (name, multiplier, unit, created_at) VALUES ($1,$2,$3,$4) RETURNING *', [ingredient.name, typeof ingredient.multiplier === 'number' ? ingredient.multiplier : Number(ingredient.multiplier), ingredient.unit ?? 'g', new Date().toISOString()]); return (rows && rows[0]) ? rows[0] : rows; }
+  async updateIngredient(id: number, ingredient: Partial<InsertIngredient>) { const mapped: any = {}; if ((ingredient as any).name !== undefined) mapped.name = (ingredient as any).name; if ((ingredient as any).unit !== undefined) mapped.unit = (ingredient as any).unit; if ((ingredient as any).multiplier !== undefined) mapped.multiplier = typeof (ingredient as any).multiplier === 'number' ? (ingredient as any).multiplier : Number((ingredient as any).multiplier); const setParts: string[] = []; const params: any[] = []; let idx = 1; for (const k of Object.keys(mapped)) { setParts.push(`${k} = $${idx}`); params.push((mapped as any)[k]); idx++; } if (setParts.length === 0) return this.getIngredient(id); params.push(id); const q = `UPDATE public.ingredients SET ${setParts.join(', ')} WHERE id = $${idx} RETURNING *`; const rows = await dbQuery(q, params); return (rows && rows[0]) ? rows[0] : undefined; }
+  async deleteIngredient(id: number) { await dbQuery('DELETE FROM public.ingredients WHERE id = $1', [id]); return true; }
 
   // Settings
-  async getSetting(key: string) { if (!supabase) return undefined; const { data } = await supabase.from('settings').select('value').eq('key', key).limit(1); return (data && data[0] && data[0].value) || undefined; }
-  async setSetting(key: string, value: string) { if (!supabase) throw new Error('Supabase not initialized'); const { data, error } = await supabase.from('settings').upsert({ key, value }).select().limit(1); if (error) throw error; return; }
+  async getSetting(key: string) { const rows = await dbQuery('SELECT value FROM public.settings WHERE key = $1 LIMIT 1', [key]); return (rows && rows[0] && rows[0].value) || undefined; }
+  async setSetting(key: string, value: string) { await dbQuery('INSERT INTO public.settings (key, value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', [key, value]); return; }
 }
 
-// Choose storage backend at runtime
-export const storage: IStorage = supabaseEnabled ? new SupabaseStorage() : new MemStorage();
+// Choose implementation at runtime based on environment variable instead of relying on
+// an imported `dbEnabled` symbol which may be elided by bundlers. This keeps the
+// built `dist-server` self-contained and avoids ReferenceError when importing.
+const _conn = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL || '';
+export const storage: IStorage = _conn ? new PostgresStorage() : new MemStorage();

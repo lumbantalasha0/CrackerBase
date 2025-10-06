@@ -24,12 +24,8 @@ export const handler = async function (event, context) {
         }
         return { statusCode: 200, body: JSON.stringify(sale) };
       } catch (err) {
-        console.error('sales_v3 neon error:', err);
-        if (process.env.DEBUG_SUPABASE_ERRORS === '1') {
-          const message = err && err.message ? err.message : String(err);
-          return { statusCode: 500, body: JSON.stringify({ error: 'Neon insert error', details: message }) };
-        }
-        // fallback to local /tmp handling below
+        console.error('sales_v3 neon error:', err && err.stack ? err.stack : err);
+        // on DB error, fall through to local /tmp fallback so UI remains usable
       }
     }
 

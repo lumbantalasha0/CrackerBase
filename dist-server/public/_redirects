@@ -1,0 +1,7 @@
+ /api/export/email /.netlify/functions/export-email 200
+/api/inventory /.netlify/functions/inventory_v3 200
+/api/sales /.netlify/functions/sales_v3 200
+/api/customers /.netlify/functions/customers_v3 200
+/api/ingredients /.netlify/functions/ingredients_v3 200
+/api/* /.netlify/functions/:splat 200
+/*    /index.html   200

@@ -9,63 +9,20 @@
   },
   "customers": [
     {
-      "id": 14,
-      "name": "Jose",
-      "phone": "09384",
-      "businessName": null,
-      "location": "dnorth",
-      "createdAt": "2025-10-02T11:29:58.750Z"
-    },
-    {
-      "id": 15,
+      "id": 1759692421443,
       "name": "MIGRATION TEST",
-      "phone": null,
-      "businessName": null,
-      "location": null,
-      "createdAt": "2025-10-02T18:08:40.653Z"
-    },
-    {
-      "id": 16,
-      "name": "MIGRATION TEST",
-      "phone": null,
-      "businessName": null,
-      "location": null,
-      "createdAt": "2025-10-02T19:48:00.957Z"
-    },
-    {
-      "id": 17,
-      "name": "MIGRATION TEST",
-      "phone": null,
-      "businessName": null,
-      "location": null,
-      "createdAt": "2025-10-02T19:54:04.017Z"
-    },
-    {
-      "id": 18,
-      "name": "MIGRATION TEST",
-      "phone": null,
-      "businessName": null,
-      "location": null,
-      "createdAt": "2025-10-02T20:32:34.929Z"
-    },
-    {
-      "id": 19,
-      "name": "MIGRATION TEST",
-      "phone": null,
-      "businessName": null,
-      "location": null,
-      "createdAt": "2025-10-03T10:40:41.785Z"
-    },
-    {
-      "id": 20,
-      "name": "MIGRATION TEST",
-      "phone": null,
-      "businessName": null,
-      "location": null,
-      "createdAt": "2025-10-03T10:43:37.711Z"
+      "createdAt": "2025-10-05T19:27:01.443Z"
     }
   ],
   "inventoryMovements": [
+    {
+      "id": 1759692421459,
+      "type": "sale",
+      "quantity": 1,
+      "balance": null,
+      "note": "Sale to 1759692421443",
+      "createdAt": "2025-10-05T19:27:01.458Z"
+    },
     {
       "id": 19,
       "type": "addition",
@@ -124,6 +81,15 @@
     }
   ],
   "sales": [
+    {
+      "id": 1759692421458,
+      "customerId": 1759692421443,
+      "customerName": "MIGRATION TEST",
+      "quantity": 1,
+      "pricePerUnit": 10,
+      "status": "completed",
+      "createdAt": "2025-10-05T19:27:01.458Z"
+    },
     {
       "id": 12,
       "customerId": 15,
@@ -187,6 +153,14 @@
   ],
   "expenseCategories": [],
   "expenses": [
+    {
+      "id": 1759692421454,
+      "categoryId": 1,
+      "amount": 12.5,
+      "description": "smoke test",
+      "status": "approved",
+      "createdAt": "2025-10-05T19:27:01.454Z"
+    },
     {
       "id": 17,
       "categoryId": 1,
