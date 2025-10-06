@@ -38,6 +38,9 @@ export default function Settings(): JSX.Element {
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [newCustomerLocation, setNewCustomerLocation] = useState("");
+  const [currentPin, setCurrentPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
 
   const ingredientColumns: TableColumn[] = [
     { key: "name", label: "Name" },
@@ -134,6 +137,35 @@ export default function Settings(): JSX.Element {
     }
   }
 
+  async function handleChangePin() {
+    if (!currentPin || !newPin || !confirmPin) {
+      toast({ title: "Error", description: "All PIN fields are required", variant: "destructive" });
+      return;
+    }
+    if (newPin.length !== 4 || confirmPin.length !== 4) {
+      toast({ title: "Error", description: "PIN must be 4 digits", variant: "destructive" });
+      return;
+    }
+    if (newPin !== confirmPin) {
+      toast({ title: "Error", description: "New PIN and confirmation do not match", variant: "destructive" });
+      return;
+    }
+    try {
+      const res = await apiRequest("POST", "/api/auth/change-pin", { currentPin, newPin });
+      if (res.ok) {
+        toast({ title: "PIN changed successfully" });
+        setCurrentPin("");
+        setNewPin("");
+        setConfirmPin("");
+      } else {
+        const data = await res.json();
+        toast({ title: "Error", description: data.error || "Failed to change PIN", variant: "destructive" });
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || String(e), variant: "destructive" });
+    }
+  }
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -148,6 +180,50 @@ export default function Settings(): JSX.Element {
           <Button variant={theme === "light" ? "default" : "outline"} onClick={() => setTheme("light")}>Light</Button>
           <Button variant={theme === "dark" ? "default" : "outline"} onClick={() => setTheme("dark")}>Dark</Button>
           <Button variant={theme === "system" ? "default" : "outline"} onClick={() => setTheme("system")}>System</Button>
+        </div>
+      </section>
+
+      {/* Change PIN */}
+      <section className="mb-8">
+        <h2 className="text-lg font-medium mb-3">Change PIN</h2>
+        <div className="max-w-md space-y-4">
+          <div>
+            <Label>Current PIN</Label>
+            <Input 
+              type="password" 
+              inputMode="numeric"
+              maxLength={4}
+              value={currentPin} 
+              onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ''))}
+              placeholder="Enter current PIN"
+              data-testid="input-current-pin"
+            />
+          </div>
+          <div>
+            <Label>New PIN</Label>
+            <Input 
+              type="password" 
+              inputMode="numeric"
+              maxLength={4}
+              value={newPin} 
+              onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+              placeholder="Enter new 4-digit PIN"
+              data-testid="input-new-pin"
+            />
+          </div>
+          <div>
+            <Label>Confirm New PIN</Label>
+            <Input 
+              type="password" 
+              inputMode="numeric"
+              maxLength={4}
+              value={confirmPin} 
+              onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+              placeholder="Confirm new PIN"
+              data-testid="input-confirm-pin"
+            />
+          </div>
+          <Button onClick={handleChangePin} data-testid="button-change-pin">Change PIN</Button>
         </div>
       </section>
 
