@@ -43,30 +43,32 @@ export default function FormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px] gap-6">
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-2xl">{title}</DialogTitle>
             {description && (
-              <DialogDescription>{description}</DialogDescription>
+              <DialogDescription className="text-base">{description}</DialogDescription>
             )}
           </DialogHeader>
           
-          <div className="py-4">
+          <div className="py-6">
             {children}
           </div>
           
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
+              data-testid="button-cancel-modal"
             >
               {cancelLabel}
             </Button>
             <Button
               type="submit"
               disabled={submitDisabled || isLoading || isSubmitting}
+              data-testid="button-submit-modal"
             >
               {isLoading || isSubmitting ? "Processing..." : submitLabel}
             </Button>
