@@ -1,6 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/utils";
 
@@ -44,25 +45,40 @@ export function StatsCard({
   loading = false,
 }: StatsCardProps) {
   return (
-    <Card className={cn(variantStyles[variant], className)}>
+    <Card className={cn(
+      variantStyles[variant], 
+      "transition-all duration-200 hover:shadow-md hover:scale-[1.02]",
+      className
+    )}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         {Icon && (
-          <Icon className={cn("h-4 w-4", iconVariantStyles[variant])} />
+          <div className="p-2 rounded-lg bg-background/50">
+            <Icon className={cn("h-4 w-4", iconVariantStyles[variant])} />
+          </div>
         )}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">
-          {typeof value === "number" ? value.toLocaleString() : value}
-        </div>
-        {subtitle && (
-          <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+        {loading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-24" />
+            {subtitle && <Skeleton className="h-4 w-32" />}
+          </div>
+        ) : (
+          <>
+            <div className="text-2xl font-bold animate-in fade-in duration-500">
+              {typeof value === "number" ? value.toLocaleString() : value}
+            </div>
+            {subtitle && (
+              <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+            )}
+          </>
         )}
         {actionLabel && onAction && (
           <Button
             variant="outline"
             size="sm"
-            className="mt-3 w-full"
+            className="mt-3 w-full transition-all hover:shadow-sm"
             onClick={onAction}
           >
             {actionLabel}

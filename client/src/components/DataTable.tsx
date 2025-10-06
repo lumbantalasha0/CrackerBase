@@ -2,7 +2,8 @@ import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Search } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, Edit, Trash2, Search, ArrowUpDown } from "lucide-react";
 
 export interface TableColumn {
   key: string;
@@ -96,10 +97,10 @@ export default function DataTable({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <h2 className="text-2xl font-bold">{title}</h2>
         {onAdd && (
-          <Button onClick={onAdd} className="flex items-center space-x-2">
+          <Button onClick={onAdd} className="flex items-center gap-2 w-full sm:w-auto" data-testid={`button-add-${title.toLowerCase().replace(/\s/g, '-')}`}>
             <Plus className="h-4 w-4" />
             <span>{addLabel}</span>
           </Button>
@@ -113,44 +114,53 @@ export default function DataTable({
           placeholder={searchPlaceholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
+          className="pl-10 transition-shadow focus-visible:shadow-md"
+          data-testid={`input-search-${title.toLowerCase().replace(/\s/g, '-')}`}
         />
       </div>
 
       {/* Table */}
-      <div className="rounded-md border overflow-x-auto">
-        <div className="min-w-[600px]">
+      <div className="rounded-lg border overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
           <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="hover:bg-transparent">
               {columns.map((column) => (
                 <TableHead
                   key={column.key}
-                  className={column.sortable ? "cursor-pointer hover:bg-muted" : ""}
+                  className={column.sortable ? "cursor-pointer hover:bg-muted/50 transition-colors select-none" : ""}
                   onClick={() => column.sortable && handleSort(column.key)}
                 >
-                  <div className="flex items-center space-x-1">
-                    <span>{column.label}</span>
-                    {column.sortable && sortConfig?.key === column.key && (
-                      <span className="text-xs">
-                        {sortConfig.direction === "asc" ? "↑" : "↓"}
-                      </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{column.label}</span>
+                    {column.sortable && (
+                      <ArrowUpDown className={`h-3.5 w-3.5 transition-all ${sortConfig?.key === column.key ? 'text-primary' : 'text-muted-foreground'}`} />
                     )}
                   </div>
                 </TableHead>
               ))}
-              {(onEdit || onDelete) && <TableHead>Actions</TableHead>}
+              {(onEdit || onDelete) && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {(isLoading || loading) ? (
-              <TableRow>
-                <TableCell colSpan={columns.length + (onEdit || onDelete ? 1 : 0)}>
-                  <div className="text-center py-8 text-muted-foreground">
-                    Loading...
-                  </div>
-                </TableCell>
-              </TableRow>
+              Array.from({ length: 3 }).map((_, i) => (
+                <TableRow key={i}>
+                  {columns.map((column) => (
+                    <TableCell key={column.key}>
+                      <Skeleton className="h-5 w-full" />
+                    </TableCell>
+                  ))}
+                  {(onEdit || onDelete) && (
+                    <TableCell>
+                      <div className="flex gap-2 justify-end">
+                        <Skeleton className="h-8 w-8" />
+                        <Skeleton className="h-8 w-8" />
+                      </div>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))
             ) : filteredAndSortedData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length + (onEdit || onDelete ? 1 : 0)}>
@@ -161,7 +171,7 @@ export default function DataTable({
               </TableRow>
             ) : (
               filteredAndSortedData.map((row, index) => (
-                <TableRow key={row.id || index}>
+                <TableRow key={row.id || index} className="transition-colors hover:bg-muted/50">
                   {columns.map((column) => (
                     <TableCell key={column.key}>
                       {column.render
@@ -171,12 +181,14 @@ export default function DataTable({
                   ))}
                   {(onEdit || onDelete) && (
                     <TableCell>
-                      <div className="flex space-x-2">
+                      <div className="flex gap-2 justify-end">
                         {onEdit && (
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => onEdit(row)}
+                            className="transition-all hover:shadow-sm"
+                            data-testid={`button-edit-${row.id}`}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -187,6 +199,8 @@ export default function DataTable({
                             size="sm"
                             onClick={() => onDelete(row)}
                             disabled={deletingIds.includes(row.id)}
+                            className="transition-all hover:shadow-sm hover:border-destructive hover:text-destructive"
+                            data-testid={`button-delete-${row.id}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
