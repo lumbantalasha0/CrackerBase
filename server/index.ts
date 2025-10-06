@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import routes from "./routes";
+import authRouter from "./auth";
 import emailExportRouter from "./emailExport";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -43,6 +44,7 @@ app.use((req, res, next) => {
 
 (async () => {
   // Add API routes
+  app.use(authRouter);
   app.use(routes);
   app.use(emailExportRouter);
   
