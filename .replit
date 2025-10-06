@@ -52,5 +52,5 @@ task = "shell.exec"
 args = "bash"
 
 [agent]
-integrations = ["javascript_sendgrid:1.0.0"]
+integrations = ["javascript_sendgrid:1.0.0", "javascript_database:1.0.0"]
 expertMode = true
