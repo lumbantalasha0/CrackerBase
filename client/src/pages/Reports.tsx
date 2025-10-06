@@ -181,7 +181,7 @@ export default function Reports() {
         } catch {}
         expensesWithCategory = allExpenses.map((exp) => ({
           ...exp,
-          categoryName: categories.find((cat: any) => cat.id === exp.categoryId)?.name || "-",
+          categoryName: (categories.find((cat: any) => (cat as any).id === exp.categoryId) as any)?.name || "-",
         }));
       }
       // capture charts as images and include them in the PDF
@@ -223,7 +223,7 @@ export default function Reports() {
         } catch {}
         expensesWithCategory = allExpenses.map((exp) => ({
           ...exp,
-          categoryName: categories.find((cat: any) => cat.id === exp.categoryId)?.name || "-",
+          categoryName: (categories.find((cat: any) => (cat as any).id === exp.categoryId) as any)?.name || "-",
         }));
       }
   // capture charts to include in the emailed PDF

@@ -1,8 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+// Supabase client removed: this project uses Neon/Postgres for server-side storage.
+// If you relied on client-side Supabase for auth/storage, replace calls with
+// calls to your server API (Netlify functions) that interact with Neon.
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+// Export a stub to avoid build-time errors if imported elsewhere. It will throw
+// if used at runtime to make the migration obvious.
+const supabase = new Proxy({}, {
+	get() { throw new Error('Supabase client removed. Call your server APIs instead.'); }
+});
 
 export { supabase };

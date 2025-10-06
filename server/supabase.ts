@@ -1,20 +1,26 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Client } from '@neondatabase/serverless';
 
-let supabase: SupabaseClient | null = null;
-let supabaseEnabled = false;
+let sql: Client | null = null;
+let dbEnabled = false;
 
-// Prefer a SUPABASE_SERVICE_ROLE or SUPABASE_KEY with elevated privileges for server
-const url = process.env.SUPABASE_URL || '';
-const key = process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_KEY || '';
+const conn = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL || '';
 
-if (url && key) {
-  supabase = createClient(url, key, { auth: { persistSession: false } });
-  supabaseEnabled = true;
+if (conn) {
+  sql = new Client({ connectionString: conn });
+  dbEnabled = true;
   // eslint-disable-next-line no-console
-  console.log('Supabase client initialized (server)');
+  console.log('Neon/Postgres client initialized (server)');
 } else {
   // eslint-disable-next-line no-console
-  console.log('Supabase not configured (SUPABASE_URL or SUPABASE_SERVICE_ROLE missing)');
+  console.log('Database not configured (NETLIFY_DATABASE_URL or DATABASE_URL missing)');
 }
 
-export { supabase, supabaseEnabled };
+async function dbQuery(text: string, params: any[] = []) {
+  if (!sql) throw new Error('Database client not initialized');
+  const res = await sql.query(text, params);
+  // Node/Postgres style: return rows if present
+  // The neondatabase serverless client returns an object with 'rows'
+  return (res && (res as any).rows) ? (res as any).rows : res;
+}
+
+export { sql, dbEnabled, dbQuery };

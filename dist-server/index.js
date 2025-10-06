@@ -7,651 +7,469 @@ import { Router } from "express";
 // server/storage.ts
 import fs from "fs";
 import path from "path";
-import { promisify } from "util";
-import { fileURLToPath } from "url";
 
 // server/supabase.ts
-import { createClient } from "@supabase/supabase-js";
-var supabase = null;
-var supabaseEnabled = false;
-var url = process.env.SUPABASE_URL || "";
-var key = process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_KEY || "";
-if (url && key) {
-  supabase = createClient(url, key, { auth: { persistSession: false } });
-  supabaseEnabled = true;
-  console.log("Supabase client initialized (server)");
+import { Client } from "@neondatabase/serverless";
+var sql = null;
+var dbEnabled = false;
+var conn = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL || "";
+if (conn) {
+  sql = new Client({ connectionString: conn });
+  dbEnabled = true;
+  console.log("Neon/Postgres client initialized (server)");
 } else {
-  console.log("Supabase not configured (SUPABASE_URL or SUPABASE_SERVICE_ROLE missing)");
+  console.log("Database not configured (NETLIFY_DATABASE_URL or DATABASE_URL missing)");
+}
+async function dbQuery(text2, params = []) {
+  if (!sql) throw new Error("Database client not initialized");
+  const res = await sql.query(text2, params);
+  return res && res.rows ? res.rows : res;
 }
 
 // server/storage.ts
-var writeFile = promisify(fs.writeFile);
-var readFile = promisify(fs.readFile);
-var mkdir = promisify(fs.mkdir);
 var MemStorage = class {
-  customers = /* @__PURE__ */ new Map();
-  inventoryMovements = /* @__PURE__ */ new Map();
-  sales = /* @__PURE__ */ new Map();
-  expenseCategories = /* @__PURE__ */ new Map();
-  expenses = /* @__PURE__ */ new Map();
-  ingredients = /* @__PURE__ */ new Map();
-  settings = /* @__PURE__ */ new Map();
-  nextCustomerId = 1;
-  nextInventoryId = 1;
-  nextSaleId = 1;
-  nextExpenseCategoryId = 1;
-  nextExpenseId = 1;
-  nextIngredientId = 1;
-  // file persistence
-  dataDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "data");
-  dataFile = path.join(this.dataDir, "storage.json");
+  filePath = path.resolve(process.cwd(), "data", "storage.json");
+  data = null;
   constructor() {
-    this.loadFromDisk().then((loaded) => {
-      if (!loaded) {
-        this.initializeDefaultData();
-        this.saveToDisk().catch(() => {
-        });
+    this.load();
+  }
+  load() {
+    try {
+      if (fs.existsSync(this.filePath)) {
+        const raw = fs.readFileSync(this.filePath, "utf8") || "{}";
+        this.data = JSON.parse(raw);
+      } else {
+        this.data = { customers: [], sales: [], expenses: [], inventoryMovements: [], ingredients: [], expenseCategories: [], settings: {} };
       }
-    }).catch(() => {
-      this.initializeDefaultData();
-      this.saveToDisk().catch(() => {
-      });
-    });
-  }
-  async ensureDataDir() {
-    try {
-      await mkdir(this.dataDir, { recursive: true });
     } catch (e) {
+      this.data = { customers: [], sales: [], expenses: [], inventoryMovements: [], ingredients: [], expenseCategories: [], settings: {} };
     }
   }
-  async saveToDisk() {
+  save() {
     try {
-      await this.ensureDataDir();
-      const payload = {
-        nextIds: {
-          nextCustomerId: this.nextCustomerId,
-          nextInventoryId: this.nextInventoryId,
-          nextSaleId: this.nextSaleId,
-          nextExpenseCategoryId: this.nextExpenseCategoryId,
-          nextExpenseId: this.nextExpenseId,
-          nextIngredientId: this.nextIngredientId
-        },
-        customers: Array.from(this.customers.values()),
-        inventoryMovements: Array.from(this.inventoryMovements.values()),
-        sales: Array.from(this.sales.values()),
-        expenseCategories: Array.from(this.expenseCategories.values()),
-        expenses: Array.from(this.expenses.values()),
-        ingredients: Array.from(this.ingredients.values()),
-        settings: Array.from(this.settings.entries())
-      };
-      await writeFile(this.dataFile, JSON.stringify(payload, null, 2), "utf8");
+      fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
+      fs.writeFileSync(this.filePath, JSON.stringify(this.data, null, 2), "utf8");
     } catch (e) {
     }
-  }
-  async loadFromDisk() {
-    try {
-      const content = await readFile(this.dataFile, "utf8");
-      const parsed = JSON.parse(content);
-      if (parsed && typeof parsed === "object") {
-        const ids = parsed.nextIds || {};
-        this.nextCustomerId = ids.nextCustomerId ?? this.nextCustomerId;
-        this.nextInventoryId = ids.nextInventoryId ?? this.nextInventoryId;
-        this.nextSaleId = ids.nextSaleId ?? this.nextSaleId;
-        this.nextExpenseCategoryId = ids.nextExpenseCategoryId ?? this.nextExpenseCategoryId;
-        this.nextExpenseId = ids.nextExpenseId ?? this.nextExpenseId;
-        this.nextIngredientId = ids.nextIngredientId ?? this.nextIngredientId;
-        const loadArrayToMap = (arr = [], map, key2 = "id") => {
-          for (const item of arr) {
-            if (item && item[key2] !== void 0) {
-              map.set(item[key2], item);
-            }
-          }
-        };
-        loadArrayToMap(parsed.customers, this.customers);
-        loadArrayToMap(parsed.inventoryMovements, this.inventoryMovements);
-        loadArrayToMap(parsed.sales, this.sales);
-        loadArrayToMap(parsed.expenseCategories, this.expenseCategories);
-        loadArrayToMap(parsed.expenses, this.expenses);
-        loadArrayToMap(parsed.ingredients, this.ingredients);
-        if (Array.isArray(parsed.settings)) {
-          for (const [k, v] of parsed.settings) {
-            this.settings.set(k, v);
-          }
-        }
-        return true;
-      }
-      return false;
-    } catch (e) {
-      return false;
-    }
-  }
-  initializeDefaultData() {
-    this.createExpenseCategory({ name: "Raw Materials", color: "blue" });
-    this.createExpenseCategory({ name: "Utilities", color: "green" });
-    this.createExpenseCategory({ name: "Transportation", color: "orange" });
-    this.createExpenseCategory({ name: "Marketing", color: "purple" });
-    this.createIngredient({ name: "Salt", multiplier: 0.02, unit: "g" });
-    this.createIngredient({ name: "Sugar", multiplier: 0.05, unit: "g" });
-    this.createIngredient({ name: "Oil", multiplier: 0.15, unit: "ml" });
-    this.createIngredient({ name: "Baking Powder", multiplier: 0.01, unit: "g" });
-    this.createIngredient({ name: "Water", multiplier: 0.4, unit: "ml" });
-    this.createCustomer({ name: "ABC Restaurant", phone: "+260 123 456 789", businessName: "ABC Restaurant Ltd", location: "Lusaka" });
-    this.createCustomer({ name: "John Doe", phone: "+260 987 654 321", businessName: "Corner Store", location: "Ndola" });
-    this.createInventoryMovement({ type: "addition", quantity: 1250, note: "Initial stock" });
   }
   // Customers
   async getCustomers() {
-    return Array.from(this.customers.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return this.data.customers || [];
   }
   async getCustomer(id) {
-    return this.customers.get(id);
+    return (this.data.customers || []).find((c) => c.id === id);
   }
   async createCustomer(customer) {
-    const id = this.nextCustomerId++;
-    const newCustomer = {
-      id,
-      name: customer.name,
-      phone: customer.phone ?? null,
-      businessName: customer.businessName ?? null,
-      location: customer.location ?? null,
-      createdAt: /* @__PURE__ */ new Date()
-    };
-    this.customers.set(id, newCustomer);
-    this.saveToDisk().catch(() => {
-    });
-    return newCustomer;
+    const id = Date.now();
+    const rec = { id, ...customer, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+    (this.data.customers ||= []).unshift(rec);
+    this.save();
+    return rec;
   }
   async updateCustomer(id, customer) {
-    const existing = this.customers.get(id);
-    if (!existing) return void 0;
-    const updated = { ...existing, ...customer };
-    this.customers.set(id, updated);
-    this.saveToDisk().catch(() => {
-    });
-    return updated;
+    const idx = (this.data.customers || []).findIndex((c) => c.id === id);
+    if (idx === -1) return void 0;
+    this.data.customers[idx] = { ...this.data.customers[idx], ...customer };
+    this.save();
+    return this.data.customers[idx];
   }
   async deleteCustomer(id) {
-    const ok = this.customers.delete(id);
-    this.saveToDisk().catch(() => {
-    });
-    return ok;
+    this.data.customers = (this.data.customers || []).filter((c) => c.id !== id);
+    this.save();
+    return true;
   }
   // Inventory
   async getInventoryMovements() {
-    return Array.from(this.inventoryMovements.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return this.data.inventoryMovements || [];
   }
   async getInventoryMovement(id) {
-    return this.inventoryMovements.get(id);
+    return (this.data.inventoryMovements || []).find((m) => m.id === id);
   }
   async createInventoryMovement(movement) {
-    const id = this.nextInventoryId++;
-    const currentStock = await this.getCurrentStock();
-    let newBalance;
-    if (movement.type === "addition") {
-      newBalance = currentStock + movement.quantity;
-    } else {
-      newBalance = currentStock - movement.quantity;
-    }
-    const newMovement = {
-      id,
-      type: movement.type,
-      quantity: movement.quantity,
-      balance: newBalance,
-      note: movement.note ?? null,
-      createdAt: /* @__PURE__ */ new Date()
-    };
-    this.inventoryMovements.set(id, newMovement);
-    this.saveToDisk().catch(() => {
-    });
-    return newMovement;
+    const id = Date.now();
+    const rec = { id, ...movement, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+    (this.data.inventoryMovements ||= []).unshift(rec);
+    this.save();
+    return rec;
   }
   async getCurrentStock() {
-    const movements = await this.getInventoryMovements();
-    if (movements.length === 0) return 0;
-    return movements[0].balance;
+    const last = (this.data.inventoryMovements || [])[0];
+    return last ? Number(last.balance || 0) : 0;
   }
   async updateInventoryMovement(id, movement) {
-    const existing = this.inventoryMovements.get(id);
-    if (!existing) return void 0;
-    const updated = { ...existing, ...movement };
-    this.inventoryMovements.set(id, updated);
-    this.saveToDisk().catch(() => {
-    });
-    return updated;
+    const idx = (this.data.inventoryMovements || []).findIndex((m) => m.id === id);
+    if (idx === -1) return void 0;
+    this.data.inventoryMovements[idx] = { ...this.data.inventoryMovements[idx], ...movement };
+    this.save();
+    return this.data.inventoryMovements[idx];
   }
   async deleteInventoryMovement(id) {
-    const ok = this.inventoryMovements.delete(id);
-    this.saveToDisk().catch(() => {
-    });
-    return ok;
+    this.data.inventoryMovements = (this.data.inventoryMovements || []).filter((m) => m.id !== id);
+    this.save();
+    return true;
   }
   // Sales
   async getSales() {
-    return Array.from(this.sales.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return this.data.sales || [];
   }
   async getSale(id) {
-    return this.sales.get(id);
+    return (this.data.sales || []).find((s) => s.id === id);
   }
   async createSale(sale) {
-    const id = this.nextSaleId++;
-    const pricePerUnit = typeof sale.pricePerUnit === "number" ? sale.pricePerUnit : Number(sale.pricePerUnit);
-    const totalPrice = pricePerUnit * sale.quantity;
-    const newSale = {
-      id,
-      customerId: sale.customerId ?? null,
-      customerName: sale.customerName ?? null,
-      quantity: sale.quantity,
-      pricePerUnit: pricePerUnit.toString(),
-      totalPrice: totalPrice.toString(),
-      status: sale.status ?? "completed",
-      createdAt: /* @__PURE__ */ new Date()
-    };
-    this.sales.set(id, newSale);
-    await this.createInventoryMovement({
-      type: "sale",
-      quantity: sale.quantity,
-      note: `Sale to ${sale.customerName || "Customer"}`
-    });
-    this.saveToDisk().catch(() => {
-    });
-    return newSale;
+    const id = Date.now();
+    const rec = { id, ...sale, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+    (this.data.sales ||= []).unshift(rec);
+    try {
+      (this.data.inventoryMovements ||= []).unshift({ id: Date.now() + 1, type: "sale", quantity: sale.quantity, balance: null, note: `Sale to ${sale.customerId ?? "Customer"}`, createdAt: (/* @__PURE__ */ new Date()).toISOString() });
+    } catch (e) {
+    }
+    this.save();
+    return rec;
   }
   async updateSale(id, sale) {
-    const existing = this.sales.get(id);
-    if (!existing) return void 0;
-    const updated = { ...existing };
-    if (sale.customerId !== void 0) updated.customerId = sale.customerId ?? null;
-    if (sale.customerName !== void 0) updated.customerName = sale.customerName ?? null;
-    if (sale.quantity !== void 0) updated.quantity = sale.quantity;
-    if (sale.status !== void 0) updated.status = sale.status;
-    if (sale.pricePerUnit !== void 0) {
-      const pricePerUnit = typeof sale.pricePerUnit === "number" ? sale.pricePerUnit : Number(sale.pricePerUnit);
-      updated.pricePerUnit = pricePerUnit.toString();
-      updated.totalPrice = (pricePerUnit * updated.quantity).toString();
-    } else if (sale.quantity !== void 0) {
-      const pricePerUnit = Number(existing.pricePerUnit);
-      updated.totalPrice = (pricePerUnit * sale.quantity).toString();
-    }
-    this.sales.set(id, updated);
-    this.saveToDisk().catch(() => {
-    });
-    return updated;
+    const idx = (this.data.sales || []).findIndex((s) => s.id === id);
+    if (idx === -1) return void 0;
+    this.data.sales[idx] = { ...this.data.sales[idx], ...sale };
+    this.save();
+    return this.data.sales[idx];
   }
   async deleteSale(id) {
-    const ok = this.sales.delete(id);
-    this.saveToDisk().catch(() => {
-    });
-    return ok;
+    this.data.sales = (this.data.sales || []).filter((s) => s.id !== id);
+    this.save();
+    return true;
   }
-  // Expense Categories
+  // Expense categories
   async getExpenseCategories() {
-    return Array.from(this.expenseCategories.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return this.data.expenseCategories || [];
   }
   async getExpenseCategory(id) {
-    return this.expenseCategories.get(id);
+    return (this.data.expenseCategories || []).find((c) => c.id === id);
   }
   async createExpenseCategory(category) {
-    const id = this.nextExpenseCategoryId++;
-    const newCategory = {
-      ...category,
-      id,
-      createdAt: /* @__PURE__ */ new Date()
-    };
-    this.expenseCategories.set(id, newCategory);
-    this.saveToDisk().catch(() => {
-    });
-    return newCategory;
+    const id = Date.now();
+    const rec = { id, ...category, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+    (this.data.expenseCategories ||= []).push(rec);
+    this.save();
+    return rec;
   }
   async updateExpenseCategory(id, category) {
-    const existing = this.expenseCategories.get(id);
-    if (!existing) return void 0;
-    const updated = { ...existing, ...category };
-    this.expenseCategories.set(id, updated);
-    this.saveToDisk().catch(() => {
-    });
-    return updated;
+    const idx = (this.data.expenseCategories || []).findIndex((c) => c.id === id);
+    if (idx === -1) return void 0;
+    this.data.expenseCategories[idx] = { ...this.data.expenseCategories[idx], ...category };
+    this.save();
+    return this.data.expenseCategories[idx];
   }
   async deleteExpenseCategory(id) {
-    const ok = this.expenseCategories.delete(id);
-    this.saveToDisk().catch(() => {
-    });
-    return ok;
+    this.data.expenseCategories = (this.data.expenseCategories || []).filter((c) => c.id !== id);
+    this.save();
+    return true;
   }
   // Expenses
   async getExpenses() {
-    return Array.from(this.expenses.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return this.data.expenses || [];
   }
   async getExpense(id) {
-    return this.expenses.get(id);
+    return (this.data.expenses || []).find((e) => e.id === id);
   }
   async createExpense(expense) {
-    const id = this.nextExpenseId++;
-    const amount = typeof expense.amount === "number" ? expense.amount : Number(expense.amount);
-    const newExpense = {
-      id,
-      categoryId: expense.categoryId ?? null,
-      amount: amount.toString(),
-      description: expense.description,
-      notes: expense.notes ?? null,
-      status: expense.status ?? "approved",
-      createdAt: /* @__PURE__ */ new Date()
-    };
-    this.expenses.set(id, newExpense);
-    this.saveToDisk().catch(() => {
-    });
-    return newExpense;
+    const id = Date.now();
+    const rec = { id, ...expense, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+    (this.data.expenses ||= []).unshift(rec);
+    this.save();
+    return rec;
   }
   async updateExpense(id, expense) {
-    const existing = this.expenses.get(id);
-    if (!existing) return void 0;
-    const updated = { ...existing };
-    if (expense.categoryId !== void 0) updated.categoryId = expense.categoryId ?? null;
-    if (expense.description !== void 0) updated.description = expense.description;
-    if (expense.notes !== void 0) updated.notes = expense.notes ?? null;
-    if (expense.status !== void 0) updated.status = expense.status;
-    if (expense.amount !== void 0) {
-      const amount = typeof expense.amount === "number" ? expense.amount : Number(expense.amount);
-      updated.amount = amount.toString();
-    }
-    this.expenses.set(id, updated);
-    this.saveToDisk().catch(() => {
-    });
-    return updated;
+    const idx = (this.data.expenses || []).findIndex((e) => e.id === id);
+    if (idx === -1) return void 0;
+    this.data.expenses[idx] = { ...this.data.expenses[idx], ...expense };
+    this.save();
+    return this.data.expenses[idx];
   }
   async deleteExpense(id) {
-    const ok = this.expenses.delete(id);
-    this.saveToDisk().catch(() => {
-    });
-    return ok;
+    this.data.expenses = (this.data.expenses || []).filter((e) => e.id !== id);
+    this.save();
+    return true;
   }
   // Ingredients
   async getIngredients() {
-    return Array.from(this.ingredients.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return this.data.ingredients || [];
   }
   async getIngredient(id) {
-    return this.ingredients.get(id);
+    return (this.data.ingredients || []).find((i) => i.id === id);
   }
   async createIngredient(ingredient) {
-    const id = this.nextIngredientId++;
-    const multiplier = typeof ingredient.multiplier === "number" ? ingredient.multiplier : Number(ingredient.multiplier);
-    const newIngredient = {
-      id,
-      name: ingredient.name,
-      multiplier: multiplier.toString(),
-      unit: ingredient.unit ?? "g",
-      createdAt: /* @__PURE__ */ new Date()
-    };
-    this.ingredients.set(id, newIngredient);
-    this.saveToDisk().catch(() => {
-    });
-    return newIngredient;
+    const id = Date.now();
+    const rec = { id, ...ingredient, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+    (this.data.ingredients ||= []).unshift(rec);
+    this.save();
+    return rec;
   }
   async updateIngredient(id, ingredient) {
-    const existing = this.ingredients.get(id);
-    if (!existing) return void 0;
-    const updated = { ...existing };
-    if (ingredient.name !== void 0) updated.name = ingredient.name;
-    if (ingredient.unit !== void 0) updated.unit = ingredient.unit;
-    if (ingredient.multiplier !== void 0) {
-      const multiplier = typeof ingredient.multiplier === "number" ? ingredient.multiplier : Number(ingredient.multiplier);
-      updated.multiplier = multiplier.toString();
-    }
-    this.ingredients.set(id, updated);
-    this.saveToDisk().catch(() => {
-    });
-    return updated;
+    const idx = (this.data.ingredients || []).findIndex((i) => i.id === id);
+    if (idx === -1) return void 0;
+    this.data.ingredients[idx] = { ...this.data.ingredients[idx], ...ingredient };
+    this.save();
+    return this.data.ingredients[idx];
   }
   async deleteIngredient(id) {
-    const ok = this.ingredients.delete(id);
-    this.saveToDisk().catch(() => {
-    });
-    return ok;
+    this.data.ingredients = (this.data.ingredients || []).filter((i) => i.id !== id);
+    this.save();
+    return true;
   }
   // Settings
-  async getSetting(key2) {
-    return this.settings.get(key2);
+  async getSetting(key) {
+    const s = this.data.settings || {};
+    return s[key];
   }
-  async setSetting(key2, value) {
-    this.settings.set(key2, value);
-    this.saveToDisk().catch(() => {
-    });
+  async setSetting(key, value) {
+    (this.data.settings ||= {})[key] = value;
+    this.save();
   }
 };
-var SupabaseStorage = class {
+var PostgresStorage = class {
+  // Customers
   async getCustomers() {
-    if (!supabase) return [];
-    const { data, error } = await supabase.from("customers").select("*").order("created_at", { ascending: false });
-    if (error) throw error;
-    return data;
+    const rows = await dbQuery("SELECT * FROM public.customers ORDER BY created_at DESC", []);
+    return rows || [];
   }
   async getCustomer(id) {
-    if (!supabase) return void 0;
-    const { data } = await supabase.from("customers").select("*").eq("id", id).limit(1);
-    return data && data[0] || void 0;
+    const rows = await dbQuery("SELECT * FROM public.customers WHERE id = $1 LIMIT 1", [id]);
+    return rows && rows[0] ? rows[0] : void 0;
   }
   async createCustomer(customer) {
-    if (!supabase) throw new Error("Supabase not initialized");
-    const payload = {
-      name: customer.name,
-      phone: customer.phone ?? null,
-      business_name: customer.businessName ?? customer.business_name ?? null,
-      location: customer.location ?? null,
-      created_at: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    const { data, error } = await supabase.from("customers").insert(payload).select().limit(1);
-    if (error) throw error;
-    return data[0];
+    const payload = [customer.name, customer.phone ?? null, customer.businessName ?? null, customer.location ?? null, (/* @__PURE__ */ new Date()).toISOString()];
+    const rows = await dbQuery("INSERT INTO public.customers (name, phone, business_name, location, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING *", payload);
+    return rows && rows[0] ? rows[0] : rows;
   }
   async updateCustomer(id, customer) {
-    if (!supabase) return void 0;
-    const { data, error } = await supabase.from("customers").update(customer).eq("id", id).select().limit(1);
-    if (error) throw error;
-    return data && data[0] || void 0;
+    const mapped = {};
+    if (customer.name !== void 0) mapped.name = customer.name;
+    if (customer.phone !== void 0) mapped.phone = customer.phone;
+    if (customer.businessName !== void 0) mapped.business_name = customer.businessName;
+    if (customer.location !== void 0) mapped.location = customer.location;
+    const setParts = [];
+    const params = [];
+    let idx = 1;
+    for (const k of Object.keys(mapped)) {
+      setParts.push(`${k} = $${idx}`);
+      params.push(mapped[k]);
+      idx++;
+    }
+    if (setParts.length === 0) return this.getCustomer(id);
+    params.push(id);
+    const q = `UPDATE public.customers SET ${setParts.join(", ")} WHERE id = $${idx} RETURNING *`;
+    const rows = await dbQuery(q, params);
+    return rows && rows[0] ? rows[0] : void 0;
   }
   async deleteCustomer(id) {
-    if (!supabase) return false;
-    const { error } = await supabase.from("customers").delete().eq("id", id);
-    if (error) throw error;
+    await dbQuery("DELETE FROM public.customers WHERE id = $1", [id]);
     return true;
   }
   // Inventory
   async getInventoryMovements() {
-    if (!supabase) return [];
-    const { data, error } = await supabase.from("inventory_movements").select("*").order("created_at", { ascending: false });
-    if (error) throw error;
-    return data;
+    const rows = await dbQuery("SELECT * FROM public.inventory_movements ORDER BY created_at DESC", []);
+    return rows || [];
   }
   async getInventoryMovement(id) {
-    if (!supabase) return void 0;
-    const { data } = await supabase.from("inventory_movements").select("*").eq("id", id).limit(1);
-    return data && data[0] || void 0;
+    const rows = await dbQuery("SELECT * FROM public.inventory_movements WHERE id = $1 LIMIT 1", [id]);
+    return rows && rows[0] ? rows[0] : void 0;
   }
   async createInventoryMovement(movement) {
-    if (!supabase) throw new Error("Supabase not initialized");
-    const payload = {
-      type: movement.type,
-      quantity: movement.quantity,
-      balance: movement.balance ?? null,
-      note: movement.note ?? null,
-      created_at: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    const { data, error } = await supabase.from("inventory_movements").insert(payload).select().limit(1);
-    if (error) throw error;
-    return data[0];
+    const params = [movement.type, movement.quantity, movement.balance ?? null, movement.note ?? null, (/* @__PURE__ */ new Date()).toISOString()];
+    const rows = await dbQuery("INSERT INTO public.inventory_movements (type, quantity, balance, note, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING *", params);
+    return rows && rows[0] ? rows[0] : rows;
   }
   async getCurrentStock() {
-    const movements = await this.getInventoryMovements();
-    if (movements.length === 0) return 0;
-    return movements[0].balance ?? 0;
+    const rows = await dbQuery("SELECT balance FROM public.inventory_movements ORDER BY created_at DESC LIMIT 1", []);
+    return rows && rows[0] && Number(rows[0].balance) || 0;
   }
   async updateInventoryMovement(id, movement) {
-    if (!supabase) return void 0;
-    const { data, error } = await supabase.from("inventory_movements").update(movement).eq("id", id).select().limit(1);
-    if (error) throw error;
-    return data && data[0] || void 0;
+    const mapped = {};
+    if (movement.type !== void 0) mapped.type = movement.type;
+    if (movement.quantity !== void 0) mapped.quantity = movement.quantity;
+    if (movement.balance !== void 0) mapped.balance = movement.balance;
+    if (movement.note !== void 0) mapped.note = movement.note;
+    const setParts = [];
+    const params = [];
+    let idx = 1;
+    for (const k of Object.keys(mapped)) {
+      setParts.push(`${k} = $${idx}`);
+      params.push(mapped[k]);
+      idx++;
+    }
+    if (setParts.length === 0) return this.getInventoryMovement(id);
+    params.push(id);
+    const q = `UPDATE public.inventory_movements SET ${setParts.join(", ")} WHERE id = $${idx} RETURNING *`;
+    const rows = await dbQuery(q, params);
+    return rows && rows[0] ? rows[0] : void 0;
   }
   async deleteInventoryMovement(id) {
-    if (!supabase) return false;
-    const { error } = await supabase.from("inventory_movements").delete().eq("id", id);
-    if (error) throw error;
+    await dbQuery("DELETE FROM public.inventory_movements WHERE id = $1", [id]);
     return true;
   }
   // Sales
   async getSales() {
-    if (!supabase) return [];
-    const { data, error } = await supabase.from("sales").select("*").order("created_at", { ascending: false });
-    if (error) throw error;
-    return data;
+    const rows = await dbQuery("SELECT * FROM public.sales ORDER BY created_at DESC", []);
+    return rows || [];
   }
   async getSale(id) {
-    if (!supabase) return void 0;
-    const { data } = await supabase.from("sales").select("*").eq("id", id).limit(1);
-    return data && data[0] || void 0;
+    const rows = await dbQuery("SELECT * FROM public.sales WHERE id = $1 LIMIT 1", [id]);
+    return rows && rows[0] ? rows[0] : void 0;
   }
   async createSale(sale) {
-    if (!supabase) throw new Error("Supabase not initialized");
-    const payload = {
-      customer_id: sale.customerId ?? sale.customer_id ?? null,
-      customer_name: sale.customerName ?? sale.customer_name ?? null,
-      quantity: Number(sale.quantity),
-      price_per_unit: typeof sale.pricePerUnit === "number" ? sale.pricePerUnit : Number(sale.pricePerUnit),
-      total_price: typeof sale.totalPrice === "number" ? sale.totalPrice : Number(sale.pricePerUnit) * Number(sale.quantity),
-      status: sale.status ?? "completed",
-      created_at: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    const { data, error } = await supabase.from("sales").insert(payload).select().limit(1);
-    if (error) throw error;
-    await this.createInventoryMovement({ type: "sale", quantity: sale.quantity, note: `Sale to ${sale.customerName || "Customer"}`, balance: null });
-    return data[0];
+    const params = [sale.customerId ?? null, sale.customerName ?? null, sale.quantity, sale.pricePerUnit, sale.totalPrice ?? sale.quantity * sale.pricePerUnit, sale.status ?? "completed", (/* @__PURE__ */ new Date()).toISOString()];
+    const rows = await dbQuery("INSERT INTO public.sales (customer_id, customer_name, quantity, price_per_unit, total_price, status, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *", params);
+    try {
+      await dbQuery("INSERT INTO public.inventory_movements (type, quantity, balance, note, created_at) VALUES ($1,$2,$3,$4,$5)", ["sale", sale.quantity, null, `Sale to ${sale.customerId ?? "Customer"}`, (/* @__PURE__ */ new Date()).toISOString()]);
+    } catch (e) {
+    }
+    return rows && rows[0] ? rows[0] : rows;
   }
   async updateSale(id, sale) {
-    if (!supabase) return void 0;
-    const { data, error } = await supabase.from("sales").update(sale).eq("id", id).select().limit(1);
-    if (error) throw error;
-    return data && data[0] || void 0;
+    const mapped = {};
+    if (sale.quantity !== void 0) mapped.quantity = sale.quantity;
+    if (sale.pricePerUnit !== void 0) mapped.price_per_unit = sale.pricePerUnit;
+    if (sale.totalPrice !== void 0) mapped.total_price = sale.totalPrice;
+    if (sale.status !== void 0) mapped.status = sale.status;
+    const setParts = [];
+    const params = [];
+    let idx = 1;
+    for (const k of Object.keys(mapped)) {
+      setParts.push(`${k} = $${idx}`);
+      params.push(mapped[k]);
+      idx++;
+    }
+    if (setParts.length === 0) return this.getSale(id);
+    params.push(id);
+    const q = `UPDATE public.sales SET ${setParts.join(", ")} WHERE id = $${idx} RETURNING *`;
+    const rows = await dbQuery(q, params);
+    return rows && rows[0] ? rows[0] : void 0;
   }
   async deleteSale(id) {
-    if (!supabase) return false;
-    const { error } = await supabase.from("sales").delete().eq("id", id);
-    if (error) throw error;
+    await dbQuery("DELETE FROM public.sales WHERE id = $1", [id]);
     return true;
   }
-  // Expense categories & expenses - minimal implementations
+  // Expense categories
   async getExpenseCategories() {
-    if (!supabase) return [];
-    const { data } = await supabase.from("expense_categories").select("*");
-    return data;
+    const rows = await dbQuery("SELECT * FROM public.expense_categories ORDER BY id", []);
+    return rows || [];
   }
   async getExpenseCategory(id) {
-    if (!supabase) return void 0;
-    const { data } = await supabase.from("expense_categories").select("*").eq("id", id).limit(1);
-    return data && data[0] || void 0;
+    const rows = await dbQuery("SELECT * FROM public.expense_categories WHERE id = $1 LIMIT 1", [id]);
+    return rows && rows[0] ? rows[0] : void 0;
   }
   async createExpenseCategory(category) {
-    if (!supabase) throw new Error("Supabase not initialized");
-    const payload = { name: category.name, color: category.color ?? null, created_at: (/* @__PURE__ */ new Date()).toISOString() };
-    const { data, error } = await supabase.from("expense_categories").insert(payload).select().limit(1);
-    if (error) throw error;
-    return data[0];
+    const rows = await dbQuery("INSERT INTO public.expense_categories (name, color, created_at) VALUES ($1,$2,$3) RETURNING *", [category.name, category.color ?? null, (/* @__PURE__ */ new Date()).toISOString()]);
+    return rows && rows[0] ? rows[0] : rows;
   }
   async updateExpenseCategory(id, category) {
-    if (!supabase) return void 0;
-    const mapped = { ...category };
+    const mapped = {};
     if (category.name !== void 0) mapped.name = category.name;
     if (category.color !== void 0) mapped.color = category.color;
-    const { data, error } = await supabase.from("expense_categories").update(mapped).eq("id", id).select().limit(1);
-    if (error) throw error;
-    return data && data[0] || void 0;
+    const setParts = [];
+    const params = [];
+    let idx = 1;
+    for (const k of Object.keys(mapped)) {
+      setParts.push(`${k} = $${idx}`);
+      params.push(mapped[k]);
+      idx++;
+    }
+    if (setParts.length === 0) return this.getExpenseCategory(id);
+    params.push(id);
+    const q = `UPDATE public.expense_categories SET ${setParts.join(", ")} WHERE id = $${idx} RETURNING *`;
+    const rows = await dbQuery(q, params);
+    return rows && rows[0] ? rows[0] : void 0;
   }
   async deleteExpenseCategory(id) {
-    if (!supabase) return false;
-    const { error } = await supabase.from("expense_categories").delete().eq("id", id);
-    if (error) throw error;
+    await dbQuery("DELETE FROM public.expense_categories WHERE id = $1", [id]);
     return true;
   }
+  // Expenses
   async getExpenses() {
-    if (!supabase) return [];
-    const { data } = await supabase.from("expenses").select("*");
-    return data;
+    const rows = await dbQuery("SELECT * FROM public.expenses ORDER BY created_at DESC", []);
+    return rows || [];
   }
   async getExpense(id) {
-    if (!supabase) return void 0;
-    const { data } = await supabase.from("expenses").select("*").eq("id", id).limit(1);
-    return data && data[0] || void 0;
+    const rows = await dbQuery("SELECT * FROM public.expenses WHERE id = $1 LIMIT 1", [id]);
+    return rows && rows[0] ? rows[0] : void 0;
   }
   async createExpense(expense) {
-    if (!supabase) throw new Error("Supabase not initialized");
-    const payload = { category_id: expense.categoryId ?? expense.category_id ?? null, amount: typeof expense.amount === "number" ? expense.amount : Number(expense.amount), description: expense.description, notes: expense.notes ?? null, status: expense.status ?? "approved", created_at: (/* @__PURE__ */ new Date()).toISOString() };
-    const { data, error } = await supabase.from("expenses").insert(payload).select().limit(1);
-    if (error) throw error;
-    return data[0];
+    const rows = await dbQuery("INSERT INTO public.expenses (category_id, amount, description, notes, status, created_at) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *", [expense.categoryId ?? expense.category_id ?? null, typeof expense.amount === "number" ? expense.amount : Number(expense.amount), expense.description, expense.notes ?? null, expense.status ?? "approved", (/* @__PURE__ */ new Date()).toISOString()]);
+    return rows && rows[0] ? rows[0] : rows;
   }
   async updateExpense(id, expense) {
-    if (!supabase) return void 0;
     const mapped = {};
     if (expense.categoryId !== void 0) mapped.category_id = expense.categoryId;
     if (expense.description !== void 0) mapped.description = expense.description;
     if (expense.notes !== void 0) mapped.notes = expense.notes;
     if (expense.status !== void 0) mapped.status = expense.status;
     if (expense.amount !== void 0) mapped.amount = typeof expense.amount === "number" ? expense.amount : Number(expense.amount);
-    const { data, error } = await supabase.from("expenses").update(mapped).eq("id", id).select().limit(1);
-    if (error) throw error;
-    return data && data[0] || void 0;
+    const setParts = [];
+    const params = [];
+    let idx = 1;
+    for (const k of Object.keys(mapped)) {
+      setParts.push(`${k} = $${idx}`);
+      params.push(mapped[k]);
+      idx++;
+    }
+    if (setParts.length === 0) return this.getExpense(id);
+    params.push(id);
+    const q = `UPDATE public.expenses SET ${setParts.join(", ")} WHERE id = $${idx} RETURNING *`;
+    const rows = await dbQuery(q, params);
+    return rows && rows[0] ? rows[0] : void 0;
   }
   async deleteExpense(id) {
-    if (!supabase) return false;
-    const { error } = await supabase.from("expenses").delete().eq("id", id);
-    if (error) throw error;
+    await dbQuery("DELETE FROM public.expenses WHERE id = $1", [id]);
     return true;
   }
   // Ingredients
   async getIngredients() {
-    if (!supabase) return [];
-    const { data } = await supabase.from("ingredients").select("*").order("created_at", { ascending: false });
-    return data;
+    const rows = await dbQuery("SELECT * FROM public.ingredients ORDER BY created_at DESC", []);
+    return rows || [];
   }
   async getIngredient(id) {
-    if (!supabase) return void 0;
-    const { data } = await supabase.from("ingredients").select("*").eq("id", id).limit(1);
-    return data && data[0] || void 0;
+    const rows = await dbQuery("SELECT * FROM public.ingredients WHERE id = $1 LIMIT 1", [id]);
+    return rows && rows[0] ? rows[0] : void 0;
   }
   async createIngredient(ingredient) {
-    if (!supabase) throw new Error("Supabase not initialized");
-    const payload = { name: ingredient.name, multiplier: typeof ingredient.multiplier === "number" ? ingredient.multiplier : Number(ingredient.multiplier), unit: ingredient.unit ?? "g", created_at: (/* @__PURE__ */ new Date()).toISOString() };
-    const { data, error } = await supabase.from("ingredients").insert(payload).select().limit(1);
-    if (error) throw error;
-    return data[0];
+    const rows = await dbQuery("INSERT INTO public.ingredients (name, multiplier, unit, created_at) VALUES ($1,$2,$3,$4) RETURNING *", [ingredient.name, typeof ingredient.multiplier === "number" ? ingredient.multiplier : Number(ingredient.multiplier), ingredient.unit ?? "g", (/* @__PURE__ */ new Date()).toISOString()]);
+    return rows && rows[0] ? rows[0] : rows;
   }
   async updateIngredient(id, ingredient) {
-    if (!supabase) return void 0;
     const mapped = {};
     if (ingredient.name !== void 0) mapped.name = ingredient.name;
     if (ingredient.unit !== void 0) mapped.unit = ingredient.unit;
     if (ingredient.multiplier !== void 0) mapped.multiplier = typeof ingredient.multiplier === "number" ? ingredient.multiplier : Number(ingredient.multiplier);
-    const { data, error } = await supabase.from("ingredients").update(mapped).eq("id", id).select().limit(1);
-    if (error) throw error;
-    return data && data[0] || void 0;
+    const setParts = [];
+    const params = [];
+    let idx = 1;
+    for (const k of Object.keys(mapped)) {
+      setParts.push(`${k} = $${idx}`);
+      params.push(mapped[k]);
+      idx++;
+    }
+    if (setParts.length === 0) return this.getIngredient(id);
+    params.push(id);
+    const q = `UPDATE public.ingredients SET ${setParts.join(", ")} WHERE id = $${idx} RETURNING *`;
+    const rows = await dbQuery(q, params);
+    return rows && rows[0] ? rows[0] : void 0;
   }
   async deleteIngredient(id) {
-    if (!supabase) return false;
-    const { error } = await supabase.from("ingredients").delete().eq("id", id);
-    if (error) throw error;
+    await dbQuery("DELETE FROM public.ingredients WHERE id = $1", [id]);
     return true;
   }
   // Settings
-  async getSetting(key2) {
-    if (!supabase) return void 0;
-    const { data } = await supabase.from("settings").select("value").eq("key", key2).limit(1);
-    return data && data[0] && data[0].value || void 0;
+  async getSetting(key) {
+    const rows = await dbQuery("SELECT value FROM public.settings WHERE key = $1 LIMIT 1", [key]);
+    return rows && rows[0] && rows[0].value || void 0;
   }
-  async setSetting(key2, value) {
-    if (!supabase) throw new Error("Supabase not initialized");
-    const { data, error } = await supabase.from("settings").upsert({ key: key2, value }).select().limit(1);
-    if (error) throw error;
+  async setSetting(key, value) {
+    await dbQuery("INSERT INTO public.settings (key, value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [key, value]);
     return;
   }
 };
-var storage = supabaseEnabled ? new SupabaseStorage() : new MemStorage();
+var _conn = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL || "";
+var storage = _conn ? new PostgresStorage() : new MemStorage();
 
 // shared/schema.ts
 import { pgTable, serial, text, integer, decimal, timestamp } from "drizzle-orm/pg-core";
@@ -810,8 +628,8 @@ async function predictTrends(opts) {
   const perDay = {};
   for (const s of sales2) {
     const dt = toLusakaDate(new Date(s.createdAt));
-    const key2 = dateKey(dt);
-    perDay[key2] = (perDay[key2] || 0) + Number(s.totalPrice || 0);
+    const key = dateKey(dt);
+    perDay[key] = (perDay[key] || 0) + Number(s.totalPrice || 0);
   }
   const days = rangeDays(start, end);
   const series = days.map((d) => ({ date: d, value: perDay[d] ?? 0 }));
@@ -1522,7 +1340,7 @@ router.get("/api/analytics/aggregates", async (req, res) => {
     const dayExpenses = expenses2.filter((e) => new Date(e.createdAt) >= startOfDay);
     const weekExpenses = expenses2.filter((e) => new Date(e.createdAt) >= startOfWeek);
     const monthExpenses = expenses2.filter((e) => new Date(e.createdAt) >= startOfMonth);
-    const sum = (arr, key2) => arr.reduce((s, x) => s + Number(x[key2] || 0), 0);
+    const sum = (arr, key) => arr.reduce((s, x) => s + Number(x[key] || 0), 0);
     res.json({
       dailyProfit: sum(daySales, "totalPrice") - sum(dayExpenses, "amount"),
       weeklyProfit: sum(weekSales, "totalPrice") - sum(weekExpenses, "amount"),
@@ -1677,8 +1495,8 @@ async function setupVite(app2, server) {
   });
   app2.use(vite.middlewares);
   app2.use("*", async (req, res, next) => {
-    const url2 = req.originalUrl;
-    if (url2.startsWith("/api")) return next();
+    const url = req.originalUrl;
+    if (url.startsWith("/api")) return next();
     try {
       const clientTemplate = path4.resolve(
         import.meta.dirname,
@@ -1691,7 +1509,7 @@ async function setupVite(app2, server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
       );
-      const page = await vite.transformIndexHtml(url2, template);
+      const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e);

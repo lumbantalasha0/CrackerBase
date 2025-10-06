@@ -6,17 +6,21 @@ export const handler = async function (event, context) {
     const { name, phone, location } = payload;
     if (!name || !String(name).trim()) return { statusCode: 400, body: JSON.stringify({ error: 'name is required' }) };
 
-    // Prefer Supabase when configured
-    if (process.env.SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_KEY)) {
+    // Prefer Neon/Postgres when configured
+    if (process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL) {
       try {
-        const { createClient } = await import('@supabase/supabase-js');
-        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_KEY, { auth: { persistSession: false } });
-        const payload = { name: String(name).trim(), phone: phone ? String(phone).trim() : null, location: location ? String(location).trim() : null, created_at: new Date().toISOString() };
-        const { data, error } = await supabase.from('customers').insert(payload).select().limit(1);
-        if (error) throw error;
-        return { statusCode: 200, body: JSON.stringify(data && data[0]) };
+        const { Client } = await import('@neondatabase/serverless');
+        const sql = new Client({ connectionString: process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL });
+        const payloadRow = { name: String(name).trim(), phone: phone ? String(phone).trim() : null, location: location ? String(location).trim() : null };
+        const cols = Object.keys(payloadRow);
+        const vals = cols.map((_, i) => `$${i+1}`).join(', ');
+        const params = cols.map(c => payloadRow[c]);
+        const sqlText = `INSERT INTO public.customers (${cols.join(',')}, created_at) VALUES (${vals}, now()) RETURNING *`;
+        const result = await sql.query(sqlText, params);
+        const rows = result && result.rows ? result.rows : [];
+        return { statusCode: 200, body: JSON.stringify(rows[0]) };
       } catch (err) {
-        console.error('customers_v3 supabase error:', err);
+        console.error('customers_v3 neon error:', err);
         // fallback to local /tmp on error to keep UI usable
         try {
           const fs = await import('fs');

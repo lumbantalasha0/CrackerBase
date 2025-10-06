@@ -17,8 +17,8 @@ export const handler = async () => {
       return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'NETLIFY_DATABASE_URL not set' }) };
     }
 
-    // Read the SQL file from the repository
-    const sqlPath = path.resolve(process.cwd(), 'supabase', 'ensure_tables.sql');
+  // Read the SQL file from the repository (this repo kept a legacy path)
+  const sqlPath = path.resolve(process.cwd(), 'supabase', 'ensure_tables.sql');
     const sqlText = await fs.readFile(sqlPath, 'utf8');
 
   const sql = createClient({ connectionString: process.env.NETLIFY_DATABASE_URL });

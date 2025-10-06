@@ -9,7 +9,8 @@ if (!initialized || !db) {
 }
 
 // db is guaranteed to be non-null here because of the guard above
-const firestore = db!;
+// annotate as any for this migration script (firestore shim may be legacy)
+const firestore: any = db!;
 
 const STORAGE_PATH = path.resolve(process.cwd(), 'data', 'storage.json');
 

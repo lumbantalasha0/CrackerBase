@@ -1,14 +1,6 @@
-Supabase setup for Crackerbase
+REMOVED: Supabase setup instructions
 
-1) Open your Supabase project and go to SQL editor.
-2) Copy the contents of `supabase/ensure_tables.sql` and run it. This creates tables expected by the Netlify functions.
-3) In Netlify site settings -> Build & deploy -> Environment -> Environment variables, add:
+The Supabase setup guide was removed at the user's request. This project now targets Neon/Postgres for serverless functions.
+
+If you intended to keep Supabase documentation, restore from git history and update the instructions to match your current deployment.
    - SUPABASE_URL = https://<your-project>.supabase.co
-   - SUPABASE_SERVICE_ROLE = <your-service-role-key>
-   - Optionally: DEBUG_SUPABASE_ERRORS = 1 (temporary, for debugging)
-4) Trigger a new deploy (Deploys -> Trigger deploy -> Clear cache and deploy).
-5) Use the debug endpoint to verify:
-   curl -i https://<your-site>/.netlify/functions/debug-supabase
-
-6) Test endpoints:
-   POST /api/customers, /api/sales, /api/inventory with JSON bodies.
