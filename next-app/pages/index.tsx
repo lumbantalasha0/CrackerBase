@@ -1,3 +1,4 @@
+import Script from 'next/script';
 import Head from 'next/head'
 import React from 'react'
 
