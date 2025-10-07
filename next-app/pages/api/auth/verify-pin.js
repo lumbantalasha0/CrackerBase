@@ -1,9 +1,15 @@
+// next-app/pages/api/auth/verify-pin.js
 export default function handler(req, res) {
-  const DEFAULT_PIN = '4207';
-  const pin = req.body?.pin;
+  if (req.method === 'POST') {
+    const { pin } = req.body;
 
-  if (pin === DEFAULT_PIN) {
-    return res.status(200).json({ ok: true, message: 'PIN accepted' });
+    if (pin === '4207') { // your default PIN
+      return res.status(200).json({ success: true });
+    } else {
+      return res.status(401).json({ success: false, message: 'Invalid PIN' });
+    }
+  } else {
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
-  return res.status(401).json({ ok: false, message: 'Invalid PIN' });
 }
