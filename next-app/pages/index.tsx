@@ -16,7 +16,11 @@ export default function Index() {
       </Head>
 
       <div id="root"></div>
-      <script type="module" src="/src/main.tsx"></script>
+        <Script
+          src="/src/main.tsx"
+          strategy="afterInteractive"
+          type="module"
+        />
     </>
   )
 }
