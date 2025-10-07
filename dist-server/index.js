@@ -1,3 +1,9 @@
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
 // server/index.ts
 import express2 from "express";
 
@@ -5,473 +11,30 @@ import express2 from "express";
 import { Router } from "express";
 
 // server/storage.ts
-import fs from "fs";
-import path from "path";
+import { eq, desc } from "drizzle-orm";
 
-// server/supabase.ts
-import { Client } from "@neondatabase/serverless";
-var sql = null;
-var dbEnabled = false;
-var conn = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL || "";
-if (conn) {
-  sql = new Client({ connectionString: conn });
-  dbEnabled = true;
-  console.log("Neon/Postgres client initialized (server)");
-} else {
-  console.log("Database not configured (NETLIFY_DATABASE_URL or DATABASE_URL missing)");
-}
-async function dbQuery(text2, params = []) {
-  if (!sql) throw new Error("Database client not initialized");
-  const res = await sql.query(text2, params);
-  return res && res.rows ? res.rows : res;
-}
-
-// server/storage.ts
-var MemStorage = class {
-  filePath = path.resolve(process.cwd(), "data", "storage.json");
-  data = null;
-  constructor() {
-    this.load();
-  }
-  load() {
-    try {
-      if (fs.existsSync(this.filePath)) {
-        const raw = fs.readFileSync(this.filePath, "utf8") || "{}";
-        this.data = JSON.parse(raw);
-      } else {
-        this.data = { customers: [], sales: [], expenses: [], inventoryMovements: [], ingredients: [], expenseCategories: [], settings: {} };
-      }
-    } catch (e) {
-      this.data = { customers: [], sales: [], expenses: [], inventoryMovements: [], ingredients: [], expenseCategories: [], settings: {} };
-    }
-  }
-  save() {
-    try {
-      fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
-      fs.writeFileSync(this.filePath, JSON.stringify(this.data, null, 2), "utf8");
-    } catch (e) {
-    }
-  }
-  // Customers
-  async getCustomers() {
-    return this.data.customers || [];
-  }
-  async getCustomer(id) {
-    return (this.data.customers || []).find((c) => c.id === id);
-  }
-  async createCustomer(customer) {
-    const id = Date.now();
-    const rec = { id, ...customer, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
-    (this.data.customers ||= []).unshift(rec);
-    this.save();
-    return rec;
-  }
-  async updateCustomer(id, customer) {
-    const idx = (this.data.customers || []).findIndex((c) => c.id === id);
-    if (idx === -1) return void 0;
-    this.data.customers[idx] = { ...this.data.customers[idx], ...customer };
-    this.save();
-    return this.data.customers[idx];
-  }
-  async deleteCustomer(id) {
-    this.data.customers = (this.data.customers || []).filter((c) => c.id !== id);
-    this.save();
-    return true;
-  }
-  // Inventory
-  async getInventoryMovements() {
-    return this.data.inventoryMovements || [];
-  }
-  async getInventoryMovement(id) {
-    return (this.data.inventoryMovements || []).find((m) => m.id === id);
-  }
-  async createInventoryMovement(movement) {
-    const id = Date.now();
-    const rec = { id, ...movement, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
-    (this.data.inventoryMovements ||= []).unshift(rec);
-    this.save();
-    return rec;
-  }
-  async getCurrentStock() {
-    const last = (this.data.inventoryMovements || [])[0];
-    return last ? Number(last.balance || 0) : 0;
-  }
-  async updateInventoryMovement(id, movement) {
-    const idx = (this.data.inventoryMovements || []).findIndex((m) => m.id === id);
-    if (idx === -1) return void 0;
-    this.data.inventoryMovements[idx] = { ...this.data.inventoryMovements[idx], ...movement };
-    this.save();
-    return this.data.inventoryMovements[idx];
-  }
-  async deleteInventoryMovement(id) {
-    this.data.inventoryMovements = (this.data.inventoryMovements || []).filter((m) => m.id !== id);
-    this.save();
-    return true;
-  }
-  // Sales
-  async getSales() {
-    return this.data.sales || [];
-  }
-  async getSale(id) {
-    return (this.data.sales || []).find((s) => s.id === id);
-  }
-  async createSale(sale) {
-    const id = Date.now();
-    const rec = { id, ...sale, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
-    (this.data.sales ||= []).unshift(rec);
-    try {
-      (this.data.inventoryMovements ||= []).unshift({ id: Date.now() + 1, type: "sale", quantity: sale.quantity, balance: null, note: `Sale to ${sale.customerId ?? "Customer"}`, createdAt: (/* @__PURE__ */ new Date()).toISOString() });
-    } catch (e) {
-    }
-    this.save();
-    return rec;
-  }
-  async updateSale(id, sale) {
-    const idx = (this.data.sales || []).findIndex((s) => s.id === id);
-    if (idx === -1) return void 0;
-    this.data.sales[idx] = { ...this.data.sales[idx], ...sale };
-    this.save();
-    return this.data.sales[idx];
-  }
-  async deleteSale(id) {
-    this.data.sales = (this.data.sales || []).filter((s) => s.id !== id);
-    this.save();
-    return true;
-  }
-  // Expense categories
-  async getExpenseCategories() {
-    return this.data.expenseCategories || [];
-  }
-  async getExpenseCategory(id) {
-    return (this.data.expenseCategories || []).find((c) => c.id === id);
-  }
-  async createExpenseCategory(category) {
-    const id = Date.now();
-    const rec = { id, ...category, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
-    (this.data.expenseCategories ||= []).push(rec);
-    this.save();
-    return rec;
-  }
-  async updateExpenseCategory(id, category) {
-    const idx = (this.data.expenseCategories || []).findIndex((c) => c.id === id);
-    if (idx === -1) return void 0;
-    this.data.expenseCategories[idx] = { ...this.data.expenseCategories[idx], ...category };
-    this.save();
-    return this.data.expenseCategories[idx];
-  }
-  async deleteExpenseCategory(id) {
-    this.data.expenseCategories = (this.data.expenseCategories || []).filter((c) => c.id !== id);
-    this.save();
-    return true;
-  }
-  // Expenses
-  async getExpenses() {
-    return this.data.expenses || [];
-  }
-  async getExpense(id) {
-    return (this.data.expenses || []).find((e) => e.id === id);
-  }
-  async createExpense(expense) {
-    const id = Date.now();
-    const rec = { id, ...expense, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
-    (this.data.expenses ||= []).unshift(rec);
-    this.save();
-    return rec;
-  }
-  async updateExpense(id, expense) {
-    const idx = (this.data.expenses || []).findIndex((e) => e.id === id);
-    if (idx === -1) return void 0;
-    this.data.expenses[idx] = { ...this.data.expenses[idx], ...expense };
-    this.save();
-    return this.data.expenses[idx];
-  }
-  async deleteExpense(id) {
-    this.data.expenses = (this.data.expenses || []).filter((e) => e.id !== id);
-    this.save();
-    return true;
-  }
-  // Ingredients
-  async getIngredients() {
-    return this.data.ingredients || [];
-  }
-  async getIngredient(id) {
-    return (this.data.ingredients || []).find((i) => i.id === id);
-  }
-  async createIngredient(ingredient) {
-    const id = Date.now();
-    const rec = { id, ...ingredient, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
-    (this.data.ingredients ||= []).unshift(rec);
-    this.save();
-    return rec;
-  }
-  async updateIngredient(id, ingredient) {
-    const idx = (this.data.ingredients || []).findIndex((i) => i.id === id);
-    if (idx === -1) return void 0;
-    this.data.ingredients[idx] = { ...this.data.ingredients[idx], ...ingredient };
-    this.save();
-    return this.data.ingredients[idx];
-  }
-  async deleteIngredient(id) {
-    this.data.ingredients = (this.data.ingredients || []).filter((i) => i.id !== id);
-    this.save();
-    return true;
-  }
-  // Settings
-  async getSetting(key) {
-    const s = this.data.settings || {};
-    return s[key];
-  }
-  async setSetting(key, value) {
-    (this.data.settings ||= {})[key] = value;
-    this.save();
-  }
-};
-var PostgresStorage = class {
-  // Customers
-  async getCustomers() {
-    const rows = await dbQuery("SELECT * FROM public.customers ORDER BY created_at DESC", []);
-    return rows || [];
-  }
-  async getCustomer(id) {
-    const rows = await dbQuery("SELECT * FROM public.customers WHERE id = $1 LIMIT 1", [id]);
-    return rows && rows[0] ? rows[0] : void 0;
-  }
-  async createCustomer(customer) {
-    const payload = [customer.name, customer.phone ?? null, customer.businessName ?? null, customer.location ?? null, (/* @__PURE__ */ new Date()).toISOString()];
-    const rows = await dbQuery("INSERT INTO public.customers (name, phone, business_name, location, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING *", payload);
-    return rows && rows[0] ? rows[0] : rows;
-  }
-  async updateCustomer(id, customer) {
-    const mapped = {};
-    if (customer.name !== void 0) mapped.name = customer.name;
-    if (customer.phone !== void 0) mapped.phone = customer.phone;
-    if (customer.businessName !== void 0) mapped.business_name = customer.businessName;
-    if (customer.location !== void 0) mapped.location = customer.location;
-    const setParts = [];
-    const params = [];
-    let idx = 1;
-    for (const k of Object.keys(mapped)) {
-      setParts.push(`${k} = $${idx}`);
-      params.push(mapped[k]);
-      idx++;
-    }
-    if (setParts.length === 0) return this.getCustomer(id);
-    params.push(id);
-    const q = `UPDATE public.customers SET ${setParts.join(", ")} WHERE id = $${idx} RETURNING *`;
-    const rows = await dbQuery(q, params);
-    return rows && rows[0] ? rows[0] : void 0;
-  }
-  async deleteCustomer(id) {
-    await dbQuery("DELETE FROM public.customers WHERE id = $1", [id]);
-    return true;
-  }
-  // Inventory
-  async getInventoryMovements() {
-    const rows = await dbQuery("SELECT * FROM public.inventory_movements ORDER BY created_at DESC", []);
-    return rows || [];
-  }
-  async getInventoryMovement(id) {
-    const rows = await dbQuery("SELECT * FROM public.inventory_movements WHERE id = $1 LIMIT 1", [id]);
-    return rows && rows[0] ? rows[0] : void 0;
-  }
-  async createInventoryMovement(movement) {
-    const params = [movement.type, movement.quantity, movement.balance ?? null, movement.note ?? null, (/* @__PURE__ */ new Date()).toISOString()];
-    const rows = await dbQuery("INSERT INTO public.inventory_movements (type, quantity, balance, note, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING *", params);
-    return rows && rows[0] ? rows[0] : rows;
-  }
-  async getCurrentStock() {
-    const rows = await dbQuery("SELECT balance FROM public.inventory_movements ORDER BY created_at DESC LIMIT 1", []);
-    return rows && rows[0] && Number(rows[0].balance) || 0;
-  }
-  async updateInventoryMovement(id, movement) {
-    const mapped = {};
-    if (movement.type !== void 0) mapped.type = movement.type;
-    if (movement.quantity !== void 0) mapped.quantity = movement.quantity;
-    if (movement.balance !== void 0) mapped.balance = movement.balance;
-    if (movement.note !== void 0) mapped.note = movement.note;
-    const setParts = [];
-    const params = [];
-    let idx = 1;
-    for (const k of Object.keys(mapped)) {
-      setParts.push(`${k} = $${idx}`);
-      params.push(mapped[k]);
-      idx++;
-    }
-    if (setParts.length === 0) return this.getInventoryMovement(id);
-    params.push(id);
-    const q = `UPDATE public.inventory_movements SET ${setParts.join(", ")} WHERE id = $${idx} RETURNING *`;
-    const rows = await dbQuery(q, params);
-    return rows && rows[0] ? rows[0] : void 0;
-  }
-  async deleteInventoryMovement(id) {
-    await dbQuery("DELETE FROM public.inventory_movements WHERE id = $1", [id]);
-    return true;
-  }
-  // Sales
-  async getSales() {
-    const rows = await dbQuery("SELECT * FROM public.sales ORDER BY created_at DESC", []);
-    return rows || [];
-  }
-  async getSale(id) {
-    const rows = await dbQuery("SELECT * FROM public.sales WHERE id = $1 LIMIT 1", [id]);
-    return rows && rows[0] ? rows[0] : void 0;
-  }
-  async createSale(sale) {
-    const params = [sale.customerId ?? null, sale.customerName ?? null, sale.quantity, sale.pricePerUnit, sale.totalPrice ?? sale.quantity * sale.pricePerUnit, sale.status ?? "completed", (/* @__PURE__ */ new Date()).toISOString()];
-    const rows = await dbQuery("INSERT INTO public.sales (customer_id, customer_name, quantity, price_per_unit, total_price, status, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *", params);
-    try {
-      await dbQuery("INSERT INTO public.inventory_movements (type, quantity, balance, note, created_at) VALUES ($1,$2,$3,$4,$5)", ["sale", sale.quantity, null, `Sale to ${sale.customerId ?? "Customer"}`, (/* @__PURE__ */ new Date()).toISOString()]);
-    } catch (e) {
-    }
-    return rows && rows[0] ? rows[0] : rows;
-  }
-  async updateSale(id, sale) {
-    const mapped = {};
-    if (sale.quantity !== void 0) mapped.quantity = sale.quantity;
-    if (sale.pricePerUnit !== void 0) mapped.price_per_unit = sale.pricePerUnit;
-    if (sale.totalPrice !== void 0) mapped.total_price = sale.totalPrice;
-    if (sale.status !== void 0) mapped.status = sale.status;
-    const setParts = [];
-    const params = [];
-    let idx = 1;
-    for (const k of Object.keys(mapped)) {
-      setParts.push(`${k} = $${idx}`);
-      params.push(mapped[k]);
-      idx++;
-    }
-    if (setParts.length === 0) return this.getSale(id);
-    params.push(id);
-    const q = `UPDATE public.sales SET ${setParts.join(", ")} WHERE id = $${idx} RETURNING *`;
-    const rows = await dbQuery(q, params);
-    return rows && rows[0] ? rows[0] : void 0;
-  }
-  async deleteSale(id) {
-    await dbQuery("DELETE FROM public.sales WHERE id = $1", [id]);
-    return true;
-  }
-  // Expense categories
-  async getExpenseCategories() {
-    const rows = await dbQuery("SELECT * FROM public.expense_categories ORDER BY id", []);
-    return rows || [];
-  }
-  async getExpenseCategory(id) {
-    const rows = await dbQuery("SELECT * FROM public.expense_categories WHERE id = $1 LIMIT 1", [id]);
-    return rows && rows[0] ? rows[0] : void 0;
-  }
-  async createExpenseCategory(category) {
-    const rows = await dbQuery("INSERT INTO public.expense_categories (name, color, created_at) VALUES ($1,$2,$3) RETURNING *", [category.name, category.color ?? null, (/* @__PURE__ */ new Date()).toISOString()]);
-    return rows && rows[0] ? rows[0] : rows;
-  }
-  async updateExpenseCategory(id, category) {
-    const mapped = {};
-    if (category.name !== void 0) mapped.name = category.name;
-    if (category.color !== void 0) mapped.color = category.color;
-    const setParts = [];
-    const params = [];
-    let idx = 1;
-    for (const k of Object.keys(mapped)) {
-      setParts.push(`${k} = $${idx}`);
-      params.push(mapped[k]);
-      idx++;
-    }
-    if (setParts.length === 0) return this.getExpenseCategory(id);
-    params.push(id);
-    const q = `UPDATE public.expense_categories SET ${setParts.join(", ")} WHERE id = $${idx} RETURNING *`;
-    const rows = await dbQuery(q, params);
-    return rows && rows[0] ? rows[0] : void 0;
-  }
-  async deleteExpenseCategory(id) {
-    await dbQuery("DELETE FROM public.expense_categories WHERE id = $1", [id]);
-    return true;
-  }
-  // Expenses
-  async getExpenses() {
-    const rows = await dbQuery("SELECT * FROM public.expenses ORDER BY created_at DESC", []);
-    return rows || [];
-  }
-  async getExpense(id) {
-    const rows = await dbQuery("SELECT * FROM public.expenses WHERE id = $1 LIMIT 1", [id]);
-    return rows && rows[0] ? rows[0] : void 0;
-  }
-  async createExpense(expense) {
-    const rows = await dbQuery("INSERT INTO public.expenses (category_id, amount, description, notes, status, created_at) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *", [expense.categoryId ?? expense.category_id ?? null, typeof expense.amount === "number" ? expense.amount : Number(expense.amount), expense.description, expense.notes ?? null, expense.status ?? "approved", (/* @__PURE__ */ new Date()).toISOString()]);
-    return rows && rows[0] ? rows[0] : rows;
-  }
-  async updateExpense(id, expense) {
-    const mapped = {};
-    if (expense.categoryId !== void 0) mapped.category_id = expense.categoryId;
-    if (expense.description !== void 0) mapped.description = expense.description;
-    if (expense.notes !== void 0) mapped.notes = expense.notes;
-    if (expense.status !== void 0) mapped.status = expense.status;
-    if (expense.amount !== void 0) mapped.amount = typeof expense.amount === "number" ? expense.amount : Number(expense.amount);
-    const setParts = [];
-    const params = [];
-    let idx = 1;
-    for (const k of Object.keys(mapped)) {
-      setParts.push(`${k} = $${idx}`);
-      params.push(mapped[k]);
-      idx++;
-    }
-    if (setParts.length === 0) return this.getExpense(id);
-    params.push(id);
-    const q = `UPDATE public.expenses SET ${setParts.join(", ")} WHERE id = $${idx} RETURNING *`;
-    const rows = await dbQuery(q, params);
-    return rows && rows[0] ? rows[0] : void 0;
-  }
-  async deleteExpense(id) {
-    await dbQuery("DELETE FROM public.expenses WHERE id = $1", [id]);
-    return true;
-  }
-  // Ingredients
-  async getIngredients() {
-    const rows = await dbQuery("SELECT * FROM public.ingredients ORDER BY created_at DESC", []);
-    return rows || [];
-  }
-  async getIngredient(id) {
-    const rows = await dbQuery("SELECT * FROM public.ingredients WHERE id = $1 LIMIT 1", [id]);
-    return rows && rows[0] ? rows[0] : void 0;
-  }
-  async createIngredient(ingredient) {
-    const rows = await dbQuery("INSERT INTO public.ingredients (name, multiplier, unit, created_at) VALUES ($1,$2,$3,$4) RETURNING *", [ingredient.name, typeof ingredient.multiplier === "number" ? ingredient.multiplier : Number(ingredient.multiplier), ingredient.unit ?? "g", (/* @__PURE__ */ new Date()).toISOString()]);
-    return rows && rows[0] ? rows[0] : rows;
-  }
-  async updateIngredient(id, ingredient) {
-    const mapped = {};
-    if (ingredient.name !== void 0) mapped.name = ingredient.name;
-    if (ingredient.unit !== void 0) mapped.unit = ingredient.unit;
-    if (ingredient.multiplier !== void 0) mapped.multiplier = typeof ingredient.multiplier === "number" ? ingredient.multiplier : Number(ingredient.multiplier);
-    const setParts = [];
-    const params = [];
-    let idx = 1;
-    for (const k of Object.keys(mapped)) {
-      setParts.push(`${k} = $${idx}`);
-      params.push(mapped[k]);
-      idx++;
-    }
-    if (setParts.length === 0) return this.getIngredient(id);
-    params.push(id);
-    const q = `UPDATE public.ingredients SET ${setParts.join(", ")} WHERE id = $${idx} RETURNING *`;
-    const rows = await dbQuery(q, params);
-    return rows && rows[0] ? rows[0] : void 0;
-  }
-  async deleteIngredient(id) {
-    await dbQuery("DELETE FROM public.ingredients WHERE id = $1", [id]);
-    return true;
-  }
-  // Settings
-  async getSetting(key) {
-    const rows = await dbQuery("SELECT value FROM public.settings WHERE key = $1 LIMIT 1", [key]);
-    return rows && rows[0] && rows[0].value || void 0;
-  }
-  async setSetting(key, value) {
-    await dbQuery("INSERT INTO public.settings (key, value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [key, value]);
-    return;
-  }
-};
-var _conn = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL || "";
-var storage = _conn ? new PostgresStorage() : new MemStorage();
+// server/db.ts
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import ws from "ws";
 
 // shared/schema.ts
+var schema_exports = {};
+__export(schema_exports, {
+  customers: () => customers,
+  expenseCategories: () => expenseCategories,
+  expenses: () => expenses,
+  ingredients: () => ingredients,
+  insertCustomerSchema: () => insertCustomerSchema,
+  insertExpenseCategorySchema: () => insertExpenseCategorySchema,
+  insertExpenseSchema: () => insertExpenseSchema,
+  insertIngredientSchema: () => insertIngredientSchema,
+  insertInventoryMovementSchema: () => insertInventoryMovementSchema,
+  insertSaleSchema: () => insertSaleSchema,
+  inventoryMovements: () => inventoryMovements,
+  sales: () => sales,
+  settings: () => settings
+});
 import { pgTable, serial, text, integer, decimal, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -591,12 +154,177 @@ var insertIngredientSchema = createInsertSchema(ingredients).omit({
   unit: z.string().default("g")
 });
 
+// server/db.ts
+neonConfig.webSocketConstructor = ws;
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL must be set. Did you forget to provision a database?"
+  );
+}
+var pool = new Pool({ connectionString: process.env.DATABASE_URL });
+var db = drizzle({ client: pool, schema: schema_exports });
+
+// server/storage.ts
+var DrizzleStorage = class {
+  async getCustomers() {
+    return await db.select().from(customers).orderBy(desc(customers.createdAt));
+  }
+  async getCustomer(id) {
+    const result = await db.select().from(customers).where(eq(customers.id, id));
+    return result[0];
+  }
+  async createCustomer(customer) {
+    const result = await db.insert(customers).values(customer).returning();
+    return result[0];
+  }
+  async updateCustomer(id, customer) {
+    const result = await db.update(customers).set(customer).where(eq(customers.id, id)).returning();
+    return result[0];
+  }
+  async deleteCustomer(id) {
+    await db.delete(customers).where(eq(customers.id, id));
+    return true;
+  }
+  async getInventoryMovements() {
+    return await db.select().from(inventoryMovements).orderBy(desc(inventoryMovements.createdAt));
+  }
+  async getInventoryMovement(id) {
+    const result = await db.select().from(inventoryMovements).where(eq(inventoryMovements.id, id));
+    return result[0];
+  }
+  async createInventoryMovement(movement) {
+    const currentStock = await this.getCurrentStock();
+    const newBalance = movement.type === "addition" ? currentStock + movement.quantity : currentStock - movement.quantity;
+    const result = await db.insert(inventoryMovements).values({
+      ...movement,
+      balance: newBalance
+    }).returning();
+    return result[0];
+  }
+  async getCurrentStock() {
+    const result = await db.select().from(inventoryMovements).orderBy(desc(inventoryMovements.createdAt)).limit(1);
+    return result[0]?.balance || 0;
+  }
+  async updateInventoryMovement(id, movement) {
+    const result = await db.update(inventoryMovements).set(movement).where(eq(inventoryMovements.id, id)).returning();
+    return result[0];
+  }
+  async deleteInventoryMovement(id) {
+    await db.delete(inventoryMovements).where(eq(inventoryMovements.id, id));
+    return true;
+  }
+  async getSales() {
+    return await db.select().from(sales).orderBy(desc(sales.createdAt));
+  }
+  async getSale(id) {
+    const result = await db.select().from(sales).where(eq(sales.id, id));
+    return result[0];
+  }
+  async createSale(sale) {
+    const totalPrice = sale.pricePerUnit * sale.quantity;
+    const result = await db.insert(sales).values({
+      ...sale,
+      totalPrice: totalPrice.toString()
+    }).returning();
+    const currentStock = await this.getCurrentStock();
+    await db.insert(inventoryMovements).values({
+      type: "sale",
+      quantity: sale.quantity,
+      balance: currentStock - sale.quantity,
+      note: `Sale to ${sale.customerName || "Customer"}`
+    });
+    return result[0];
+  }
+  async updateSale(id, sale) {
+    const updateData = { ...sale };
+    if (sale.pricePerUnit !== void 0 && sale.quantity !== void 0) {
+      updateData.totalPrice = (sale.pricePerUnit * sale.quantity).toString();
+    }
+    const result = await db.update(sales).set(updateData).where(eq(sales.id, id)).returning();
+    return result[0];
+  }
+  async deleteSale(id) {
+    await db.delete(sales).where(eq(sales.id, id));
+    return true;
+  }
+  async getExpenseCategories() {
+    return await db.select().from(expenseCategories).orderBy(expenseCategories.id);
+  }
+  async getExpenseCategory(id) {
+    const result = await db.select().from(expenseCategories).where(eq(expenseCategories.id, id));
+    return result[0];
+  }
+  async createExpenseCategory(category) {
+    const result = await db.insert(expenseCategories).values(category).returning();
+    return result[0];
+  }
+  async updateExpenseCategory(id, category) {
+    const result = await db.update(expenseCategories).set(category).where(eq(expenseCategories.id, id)).returning();
+    return result[0];
+  }
+  async deleteExpenseCategory(id) {
+    await db.delete(expenseCategories).where(eq(expenseCategories.id, id));
+    return true;
+  }
+  async getExpenses() {
+    return await db.select().from(expenses).orderBy(desc(expenses.createdAt));
+  }
+  async getExpense(id) {
+    const result = await db.select().from(expenses).where(eq(expenses.id, id));
+    return result[0];
+  }
+  async createExpense(expense) {
+    const result = await db.insert(expenses).values(expense).returning();
+    return result[0];
+  }
+  async updateExpense(id, expense) {
+    const result = await db.update(expenses).set(expense).where(eq(expenses.id, id)).returning();
+    return result[0];
+  }
+  async deleteExpense(id) {
+    await db.delete(expenses).where(eq(expenses.id, id));
+    return true;
+  }
+  async getIngredients() {
+    return await db.select().from(ingredients).orderBy(desc(ingredients.createdAt));
+  }
+  async getIngredient(id) {
+    const result = await db.select().from(ingredients).where(eq(ingredients.id, id));
+    return result[0];
+  }
+  async createIngredient(ingredient) {
+    const result = await db.insert(ingredients).values(ingredient).returning();
+    return result[0];
+  }
+  async updateIngredient(id, ingredient) {
+    const result = await db.update(ingredients).set(ingredient).where(eq(ingredients.id, id)).returning();
+    return result[0];
+  }
+  async deleteIngredient(id) {
+    await db.delete(ingredients).where(eq(ingredients.id, id));
+    return true;
+  }
+  async getSetting(key) {
+    const result = await db.select().from(settings).where(eq(settings.key, key));
+    return result[0]?.value;
+  }
+  async setSetting(key, value) {
+    const existing = await this.getSetting(key);
+    if (existing) {
+      await db.update(settings).set({ value, updatedAt: /* @__PURE__ */ new Date() }).where(eq(settings.key, key));
+    } else {
+      await db.insert(settings).values({ key, value });
+    }
+  }
+};
+var storage = new DrizzleStorage();
+
 // server/routes.ts
 import { z as z2 } from "zod";
 
 // server/predict/trends.ts
-import fs2 from "fs/promises";
-import path2 from "path";
+import fs from "fs/promises";
+import path from "path";
 function toLusakaDate(d) {
   return new Date(d.getTime() + 2 * 60 * 60 * 1e3);
 }
@@ -604,8 +332,8 @@ function dateKey(d) {
   return d.toISOString().slice(0, 10);
 }
 async function ensurePredictionsDir() {
-  const dir = path2.resolve(path2.dirname(new URL(import.meta.url).pathname), "..", "data", "predictions");
-  await fs2.mkdir(dir, { recursive: true });
+  const dir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..", "data", "predictions");
+  await fs.mkdir(dir, { recursive: true });
   return dir;
 }
 function rangeDays(start, end) {
@@ -777,7 +505,7 @@ async function predictTrends(opts) {
     predictions: outPreds.map((p) => ({ ...p, recommended_action: recommendations[p.date] })),
     outliers
   };
-  await fs2.writeFile(path2.join(dir, filename), JSON.stringify(outPayload, null, 2), "utf8");
+  await fs.writeFile(path.join(dir, filename), JSON.stringify(outPayload, null, 2), "utf8");
   if (opts.storeDb) {
     try {
       await storage.setSetting(`predictions:${filename}`, JSON.stringify(outPayload));
@@ -1364,11 +1092,61 @@ router.post("/api/v1/predict/trends", async (req, res) => {
   }
 });
 
-// server/emailExport.ts
+// server/auth.ts
 import { Router as Router2 } from "express";
-import nodemailer from "nodemailer";
 var router2 = Router2();
-router2.post("/api/export/email", async (req, res) => {
+var DEFAULT_PIN = "4207";
+router2.post("/api/auth/verify-pin", async (req, res) => {
+  try {
+    const { pin } = req.body;
+    if (!pin) {
+      return res.status(400).json({ error: "PIN is required" });
+    }
+    let storedPin = await storage.getSetting("app_pin");
+    if (!storedPin) {
+      await storage.setSetting("app_pin", DEFAULT_PIN);
+      storedPin = DEFAULT_PIN;
+    }
+    if (pin === storedPin) {
+      return res.json({ success: true });
+    }
+    return res.status(401).json({ error: "Invalid PIN" });
+  } catch (error) {
+    console.error("PIN verification error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+router2.post("/api/auth/change-pin", async (req, res) => {
+  try {
+    const { currentPin, newPin } = req.body;
+    if (!currentPin || !newPin) {
+      return res.status(400).json({ error: "Current PIN and new PIN are required" });
+    }
+    if (newPin.length !== 4 || !/^\d+$/.test(newPin)) {
+      return res.status(400).json({ error: "PIN must be 4 digits" });
+    }
+    let storedPin = await storage.getSetting("app_pin");
+    if (!storedPin) {
+      await storage.setSetting("app_pin", DEFAULT_PIN);
+      storedPin = DEFAULT_PIN;
+    }
+    if (currentPin !== storedPin) {
+      return res.status(401).json({ error: "Current PIN is incorrect" });
+    }
+    await storage.setSetting("app_pin", newPin);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("PIN change error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+var auth_default = router2;
+
+// server/emailExport.ts
+import { Router as Router3 } from "express";
+import nodemailer from "nodemailer";
+var router3 = Router3();
+router3.post("/api/export/email", async (req, res) => {
   try {
     const { pdfBase64, filename } = req.body;
     if (!pdfBase64 || !filename) {
@@ -1415,18 +1193,18 @@ router2.post("/api/export/email", async (req, res) => {
     res.status(500).json({ error: "Failed to send email", details: error?.toString() });
   }
 });
-var emailExport_default = router2;
+var emailExport_default = router3;
 
 // server/vite.ts
 import express from "express";
-import fs3 from "fs";
-import path4 from "path";
+import fs2 from "fs";
+import path3 from "path";
 import { createServer as createViteServer, createLogger } from "vite";
 
 // vite.config.ts
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import path3 from "path";
+import path2 from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 var vite_config_default = defineConfig({
   plugins: [
@@ -1443,15 +1221,15 @@ var vite_config_default = defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path3.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path3.resolve(import.meta.dirname, "shared"),
-      "@assets": path3.resolve(import.meta.dirname, "attached_assets")
+      "@": path2.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path2.resolve(import.meta.dirname, "shared"),
+      "@assets": path2.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  root: path3.resolve(import.meta.dirname, "client"),
+  root: path2.resolve(import.meta.dirname, "client"),
   build: {
     // Put the client build at /dist so Netlify can serve index.html from the project root
-    outDir: path3.resolve(import.meta.dirname, "dist"),
+    outDir: path2.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true
   },
   server: {
@@ -1498,13 +1276,13 @@ async function setupVite(app2, server) {
     const url = req.originalUrl;
     if (url.startsWith("/api")) return next();
     try {
-      const clientTemplate = path4.resolve(
+      const clientTemplate = path3.resolve(
         import.meta.dirname,
         "..",
         "client",
         "index.html"
       );
-      let template = await fs3.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs2.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
@@ -1518,15 +1296,15 @@ async function setupVite(app2, server) {
   });
 }
 function serveStatic(app2) {
-  const distPath = path4.resolve(import.meta.dirname, "public");
-  if (!fs3.existsSync(distPath)) {
+  const distPath = path3.resolve(import.meta.dirname, "public");
+  if (!fs2.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app2.use(express.static(distPath));
   app2.use("*", (_req, res) => {
-    res.sendFile(path4.resolve(distPath, "index.html"));
+    res.sendFile(path3.resolve(distPath, "index.html"));
   });
 }
 
@@ -1536,7 +1314,7 @@ app.use(express2.json());
 app.use(express2.urlencoded({ extended: false }));
 app.use((req, res, next) => {
   const start = Date.now();
-  const path5 = req.path;
+  const path4 = req.path;
   let capturedJsonResponse = void 0;
   console.log(`REQ ${req.method} ${req.path} (content-type: ${req.headers["content-type"] || ""})`);
   const originalResJson = res.json;
@@ -1546,8 +1324,8 @@ app.use((req, res, next) => {
   };
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path5.startsWith("/api")) {
-      let logLine = `${req.method} ${path5} ${res.statusCode} in ${duration}ms`;
+    if (path4.startsWith("/api")) {
+      let logLine = `${req.method} ${path4} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
@@ -1560,6 +1338,7 @@ app.use((req, res, next) => {
   next();
 });
 (async () => {
+  app.use(auth_default);
   app.use(routes_default);
   app.use(emailExport_default);
   const server = (await import("http")).createServer(app);
