@@ -598,6 +598,189 @@ router.get('/api/analytics/top-customers', async (req, res) => {
   }
 });
 
+// AI Assistant Routes
+router.post("/api/ai/chat", async (req, res) => {
+  try {
+    const { message } = req.body;
+    
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+    if (!OPENAI_API_KEY) {
+      return res.status(500).json({ error: "OpenAI API key not configured" });
+    }
+
+    const systemPrompt = `You are the BEMACHO AI Assistant — an intelligent operations helper inside the "BEMACHO Crackers Manager" system.
+
+Your role:
+- Interpret natural language input from the user describing their daily activities (sales, purchases, expenses, or production).
+- Convert the described information into structured data that can be directly entered into the system's database.
+- Ask clarifying questions if the input is incomplete or ambiguous.
+- Never invent data — only use what's provided or confirmed by the user.
+
+System Overview:
+BEMACHO Crackers Manager is a business management web app for a crackers manufacturing and retail business in Zambia (currency: Kwacha/K or ZMW). It manages:
+- Inventory (crackers, ingredients, packaging)
+- Sales (customer transactions)
+- Expenses (supplies, utilities, packaging, etc.)
+- Production (batch size, ingredients used)
+
+Database Entities:
+- **Sales**: {date, customerName, quantity, pricePerUnit, totalAmount, notes}
+- **Expenses**: {date, categoryName, amount, description} - categoryName will be mapped to actual category ID
+- **Inventory Movements**: {date, type ("addition" | "removal"), quantity, notes}
+- **Customers**: {name, phone, location}
+
+Your task:
+1. Understand user input like:
+   - "I sold 15 packs for K30 each to John."
+   - "We bought 25kg of flour for K350."
+   - "Produced 200 packs today."
+   - "Electricity bill K650 today."
+
+2. Output a JSON object representing the action to take:
+   {
+     "action": "create_sale" | "create_expense" | "create_inventory" | "create_customer" | "clarify",
+     "data": { ...fields based on action... },
+     "message": "Brief confirmation message"
+   }
+
+3. If something's unclear, use action "clarify" and ask a question.
+
+Examples:
+User: "Sold 10 packs for K25 each to Chanda"
+AI: {"action": "create_sale", "data": {"customerName": "Chanda", "quantity": 10, "pricePerUnit": 25, "totalAmount": 250, "date": "${new Date().toISOString().split('T')[0]}"}, "message": "Recorded sale of 10 packs to Chanda for K250"}
+
+User: "Bought sugar K400"
+AI: {"action": "create_expense", "data": {"categoryName": "Sugar", "amount": 400, "description": "Purchased sugar", "date": "${new Date().toISOString().split('T')[0]}"}, "message": "Recorded expense: Sugar K400"}
+
+User: "Bought flour K500"
+AI: {"action": "create_expense", "data": {"categoryName": "Flour", "amount": 500, "description": "Purchased flour", "date": "${new Date().toISOString().split('T')[0]}"}, "message": "Recorded expense: Flour K500"}
+
+User: "Produced 200 packs"
+AI: {"action": "create_inventory", "data": {"type": "addition", "quantity": 200, "notes": "Production batch", "date": "${new Date().toISOString().split('T')[0]}"}, "message": "Added 200 packs to inventory"}
+
+Behavior Rules:
+- Always output valid JSON only (no markdown, no extra text)
+- Use today's date unless specified
+- Use title case for names
+- For expenses, return the categoryName (e.g., "Flour", "Sugar", "Oil", "Packaging", "Electricity") - it will be mapped to the correct ID
+- Ask for missing info only once before assuming defaults`;
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: message }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error("OpenAI API error:", error);
+      return res.status(response.status).json({ error: "AI service error" });
+    }
+
+    const aiResponse = await response.json();
+    const aiMessage = aiResponse.choices[0].message.content;
+
+    // Try to parse the AI response as JSON
+    let parsedResponse;
+    try {
+      parsedResponse = JSON.parse(aiMessage);
+    } catch (e) {
+      // If AI didn't return JSON, treat it as a clarification
+      parsedResponse = {
+        action: "clarify",
+        message: aiMessage
+      };
+    }
+
+    // Handle the action
+    let result: any = { success: false, message: parsedResponse.message };
+
+    if (parsedResponse.action === "create_sale") {
+      try {
+        const saleData = insertSaleSchema.parse(parsedResponse.data);
+        const sale = await storage.createSale(saleData);
+        result = { success: true, data: sale, message: parsedResponse.message };
+      } catch (error) {
+        console.error("Error creating sale:", error);
+        result = { success: false, message: "Failed to create sale. Please try again." };
+      }
+    } else if (parsedResponse.action === "create_expense") {
+      try {
+        // Fetch expense categories to map category name to ID
+        const categories = await storage.getExpenseCategories();
+        const categoryName = parsedResponse.data.categoryName;
+        
+        if (!categoryName) {
+          result = { success: false, message: "Please specify which expense category (e.g., Flour, Sugar, Oil, Packaging, Electricity)" };
+        } else {
+          // Find matching category (case-insensitive)
+          const category = categories.find(
+            (cat: any) => cat.name.toLowerCase() === categoryName.toLowerCase()
+          );
+          
+          if (!category) {
+            result = { success: false, message: `Category "${categoryName}" not found. Available categories: ${categories.map((c: any) => c.name).join(', ')}` };
+          } else {
+            // Replace categoryName with categoryId
+            const expenseDataWithId = {
+              ...parsedResponse.data,
+              categoryId: category.id
+            };
+            delete expenseDataWithId.categoryName;
+            
+            const expenseData = insertExpenseSchema.parse(expenseDataWithId);
+            const expense = await storage.createExpense(expenseData);
+            result = { success: true, data: expense, message: parsedResponse.message };
+          }
+        }
+      } catch (error) {
+        console.error("Error creating expense:", error);
+        result = { success: false, message: "Failed to create expense. Please try again." };
+      }
+    } else if (parsedResponse.action === "create_inventory") {
+      try {
+        const inventoryData = insertInventoryMovementSchema.parse(parsedResponse.data);
+        const movement = await storage.createInventoryMovement(inventoryData);
+        result = { success: true, data: movement, message: parsedResponse.message };
+      } catch (error) {
+        console.error("Error creating inventory movement:", error);
+        result = { success: false, message: "Failed to create inventory movement. Please try again." };
+      }
+    } else if (parsedResponse.action === "create_customer") {
+      try {
+        const customerData = insertCustomerSchema.parse(parsedResponse.data);
+        const customer = await storage.createCustomer(customerData);
+        result = { success: true, data: customer, message: parsedResponse.message };
+      } catch (error) {
+        console.error("Error creating customer:", error);
+        result = { success: false, message: "Failed to create customer. Please try again." };
+      }
+    } else if (parsedResponse.action === "clarify") {
+      result = { success: true, clarification: true, message: parsedResponse.message };
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error in AI chat:", error);
+    res.status(500).json({ error: "Failed to process AI request" });
+  }
+});
+
 export default router;
 
 // Additional analytics endpoints

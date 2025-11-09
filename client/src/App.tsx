@@ -11,6 +11,7 @@ import Sales from "./pages/Sales";
 import Expenses from "./pages/Expenses";
 import Calculator from "./pages/Calculator";
 import Reports from "./pages/Reports";
+import AIAssistant from "./pages/AIAssistant";
 import Settings from "./pages/Settings";
 import PinLogin from "./pages/PinLogin";
 import NotFound from "./pages/not-found";
@@ -31,6 +32,7 @@ function ProtectedRouter() {
         <Route path="/expenses" component={Expenses} />
         <Route path="/calculator" component={Calculator} />
         <Route path="/reports" component={Reports} />
+        <Route path="/ai-assistant" component={AIAssistant} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>

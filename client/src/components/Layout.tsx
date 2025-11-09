@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Home, Package, ShoppingCart, Receipt, TrendingUp, Settings, Calculator, X } from "lucide-react";
+import { Home, Package, ShoppingCart, Receipt, TrendingUp, Settings, Calculator, Sparkles, X } from "lucide-react";
 import { cn } from "@/utils";
 
 interface LayoutProps {
@@ -9,6 +9,7 @@ interface LayoutProps {
 
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: Home },
+  { href: "/ai-assistant", label: "AI Assistant", icon: Sparkles, highlight: true },
   { href: "/inventory", label: "Inventory", icon: Package },
   { href: "/sales", label: "Sales", icon: ShoppingCart },
   { href: "/expenses", label: "Expenses", icon: Receipt },
@@ -68,13 +69,18 @@ export default function Layout({ children }: LayoutProps) {
                             <a 
                               className={cn(
                                 "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all",
+                                item.highlight && !isActive && "border border-primary/30",
                                 isActive 
-                                  ? 'bg-primary text-primary-foreground shadow-sm' 
+                                  ? item.highlight
+                                    ? 'bg-gradient-to-r from-primary to-amber-600 text-primary-foreground shadow-md'
+                                    : 'bg-primary text-primary-foreground shadow-sm'
+                                  : item.highlight
+                                  ? 'text-primary hover:bg-primary/10 hover:border-primary/50'
                                   : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                               )}
                               data-testid={`link-mobile-${item.href.slice(1) || 'dashboard'}`}
                             >
-                              <Icon className="h-4 w-4" />
+                              <Icon className={cn("h-4 w-4", item.highlight && !isActive && "text-primary")} />
                               <span>{item.label}</span>
                             </a>
                           </Link>
@@ -103,13 +109,16 @@ export default function Layout({ children }: LayoutProps) {
                       <a
                         className={cn(
                           "flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300",
+                          item.highlight && !isActive && "border border-primary/30 shadow-sm",
                           isActive
                             ? "bg-gradient-to-r from-primary to-amber-600 text-primary-foreground shadow-lg scale-105"
+                            : item.highlight
+                            ? "text-primary hover:bg-primary/10 hover:shadow-lg hover:scale-102 hover:border-primary/50"
                             : "text-muted-foreground hover:text-foreground hover:bg-background/40 hover:shadow-md hover:scale-102"
                         )}
                         data-testid={`link-${item.href.slice(1) || 'dashboard'}`}
                       >
-                        <Icon className="h-4 w-4" />
+                        <Icon className={cn("h-4 w-4", item.highlight && !isActive && "text-primary animate-pulse")} />
                         <span>{item.label}</span>
                       </a>
                     </Link>
