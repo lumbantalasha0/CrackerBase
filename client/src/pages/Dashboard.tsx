@@ -212,14 +212,17 @@ export default function Dashboard() {
           )}
 
           {/* Quick Actions */}
-          <Card>
+          <Card className="glass-heavy shadow-lg">
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Quick Actions
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button 
                 variant="outline" 
-                className="w-full justify-start" 
+                className="w-full justify-start shadow-sm hover:shadow-md" 
                 onClick={handleNavigateToSales}
                 data-testid="button-quick-record-sale"
               >
@@ -228,7 +231,7 @@ export default function Dashboard() {
               </Button>
               <Button 
                 variant="outline" 
-                className="w-full justify-start" 
+                className="w-full justify-start shadow-sm hover:shadow-md" 
                 onClick={handleNavigateToExpenses}
                 data-testid="button-quick-add-expense"
               >
@@ -237,7 +240,7 @@ export default function Dashboard() {
               </Button>
               <Button 
                 variant="outline" 
-                className="w-full justify-start" 
+                className="w-full justify-start shadow-sm hover:shadow-md" 
                 onClick={handleNavigateToInventory}
                 data-testid="button-quick-add-stock"
               >
