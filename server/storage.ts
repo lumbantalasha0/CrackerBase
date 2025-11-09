@@ -54,7 +54,7 @@ export interface IStorage {
 
 export class DrizzleStorage implements IStorage {
   async getCustomers(): Promise<any[]> {
-    return await db.select().from(schema.customers).orderBy(schema.customers.name); // A-Z sorting
+    return await db.select().from(schema.customers).orderBy(schema.customers.id); // ID order
   }
 
   async getCustomer(id: number): Promise<any | undefined> {
