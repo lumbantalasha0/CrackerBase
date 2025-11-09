@@ -1,0 +1,72 @@
+2025-11-09T17:22:14.787553056Z 
+2025-11-09T17:22:14.787576397Z 9 vulnerabilities (3 low, 6 moderate)
+2025-11-09T17:22:14.787582538Z 
+2025-11-09T17:22:14.787589088Z To address issues that do not require attention, run:
+2025-11-09T17:22:14.787592728Z   npm audit fix
+2025-11-09T17:22:14.787595978Z 
+2025-11-09T17:22:14.787599368Z To address all issues (including breaking changes), run:
+2025-11-09T17:22:14.787604069Z   npm audit fix --force
+2025-11-09T17:22:14.787607399Z 
+2025-11-09T17:22:14.787611249Z Run `npm audit` for details.
+2025-11-09T17:22:14.971174495Z 
+2025-11-09T17:22:14.971200417Z > rest-express@1.0.0 build
+2025-11-09T17:22:14.971206207Z > vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist-server
+2025-11-09T17:22:14.971213748Z 
+2025-11-09T17:22:15.159702628Z vite v5.4.20 building for production...
+2025-11-09T17:22:15.207986362Z transforming...
+2025-11-09T17:22:15.4514024Z Browserslist: browsers data (caniuse-lite) is 13 months old. Please run:
+2025-11-09T17:22:15.451429032Z   npx update-browserslist-db@latest
+2025-11-09T17:22:15.451446933Z   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+2025-11-09T17:22:23.779594221Z ✓ 2916 modules transformed.
+2025-11-09T17:22:24.167594008Z rendering chunks...
+2025-11-09T17:22:24.597093103Z computing gzip size...
+2025-11-09T17:22:24.630466912Z ../dist/index.html                              2.11 kB │ gzip:   0.83 kB
+2025-11-09T17:22:24.630841753Z 
+2025-11-09T17:22:24.666411288Z (!) Some chunks are larger than 500 kB after minification. Consider:
+2025-11-09T17:22:24.666420089Z - Using dynamic import() to code-split the application
+2025-11-09T17:22:24.666424629Z - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+2025-11-09T17:22:24.666428889Z - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+2025-11-09T17:22:24.666429929Z ../dist/assets/index-C27MI3Vn.css              79.71 kB │ gzip:  12.77 kB
+2025-11-09T17:22:24.6664518Z ../dist/assets/purify.es-DfngIMfA.js           22.26 kB │ gzip:   8.72 kB
+2025-11-09T17:22:24.666456611Z ../dist/assets/index.es-C6IlZrkx.js           150.53 kB │ gzip:  51.48 kB
+2025-11-09T17:22:24.666461071Z ../dist/assets/html2canvas.esm-CBrSDip1.js    201.42 kB │ gzip:  48.03 kB
+2025-11-09T17:22:24.666465341Z ../dist/assets/index-DXbYQMC5.js            1,219.41 kB │ gzip: 368.04 kB
+2025-11-09T17:22:24.666469852Z ✓ built in 9.45s
+2025-11-09T17:22:24.735785897Z 
+2025-11-09T17:22:24.736136237Z   dist-server/index.js  58.5kb
+2025-11-09T17:22:24.736139467Z 
+2025-11-09T17:22:24.736142037Z ⚡ Done in 12ms
+2025-11-09T17:22:38.148420108Z ==> Uploading build...
+2025-11-09T17:23:12.948801085Z ==> Uploaded in 10.3s. Compression took 24.5s
+2025-11-09T17:23:13.078933333Z ==> Build successful 🎉
+2025-11-09T17:23:30.529508436Z ==> Deploying...
+2025-11-09T17:24:22.632759753Z ==> Running 'pnpm run start'
+2025-11-09T17:24:26.135565131Z 
+2025-11-09T17:24:26.135588073Z > rest-express@1.0.0 start /opt/render/project/src
+2025-11-09T17:24:26.135593043Z > NODE_ENV=production node dist-server/index.js
+2025-11-09T17:24:26.135595193Z 
+2025-11-09T17:24:33.630115274Z 5:24:33 PM [express] serving on port 10000
+2025-11-09T17:24:33.792983599Z REQ HEAD / (content-type: )
+2025-11-09T17:24:41.546949713Z ==> Your service is live 🎉
+2025-11-09T17:24:41.594676808Z ==> 
+2025-11-09T17:24:41.637240905Z ==> ///////////////////////////////////////////////////////////
+2025-11-09T17:24:41.683926742Z ==> 
+2025-11-09T17:24:41.729545478Z ==> Available at your primary URL https://crackerbase.onrender.com
+2025-11-09T17:24:41.778106744Z ==> 
+2025-11-09T17:24:41.82772961Z ==> ///////////////////////////////////////////////////////////
+2025-11-09T17:25:07.873755216Z REQ GET / (content-type: )
+2025-11-09T17:25:08.424833604Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T17:25:09.102373984Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T17:25:12.860180243Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T17:25:13.129185018Z REQ GET /favicon.ico (content-type: )
+2025-11-09T17:25:13.130282351Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T17:25:14.530599339Z 5:25:14 PM [express] GET /api/analytics/recent-activity 304 in 1671ms :: [{"id":"sale-43","type":"sa…
+2025-11-09T17:25:15.53546047Z 5:25:15 PM [express] GET /api/analytics/dashboard 304 in 2404ms :: {"totalSales":17619,"totalExpense…
+2025-11-09T17:25:25.420895669Z REQ GET / (content-type: )
+2025-11-09T17:25:25.968970645Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T17:25:25.969895578Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T17:25:30.531370664Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T17:25:30.578615336Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T17:25:30.629188179Z REQ GET /favicon.ico (content-type: )
+2025-11-09T17:25:30.841075117Z 5:25:30 PM [express] GET /api/analytics/recent-activity 304 in 310ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T17:25:30.930142291Z 5:25:30 PM [express] GET /api/analytics/dashboard 304 in 351ms :: {"totalSales":17619,"totalExpenses…
