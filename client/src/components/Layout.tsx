@@ -66,9 +66,9 @@ export default function Layout({ children }: LayoutProps) {
                       return (
                         <li key={item.href}>
                           <Link href={item.href}>
-                            <a 
+                            <div 
                               className={cn(
-                                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all",
+                                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all cursor-pointer",
                                 item.highlight && !isActive && "border border-primary/30",
                                 isActive 
                                   ? item.highlight
@@ -82,7 +82,7 @@ export default function Layout({ children }: LayoutProps) {
                             >
                               <Icon className={cn("h-4 w-4", item.highlight && !isActive && "text-primary")} />
                               <span>{item.label}</span>
-                            </a>
+                            </div>
                           </Link>
                         </li>
                       );
@@ -106,9 +106,9 @@ export default function Layout({ children }: LayoutProps) {
                 return (
                   <li key={item.href}>
                     <Link href={item.href}>
-                      <a
+                      <div
                         className={cn(
-                          "flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300",
+                          "flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 cursor-pointer",
                           item.highlight && !isActive && "border border-primary/30 shadow-sm",
                           isActive
                             ? "bg-gradient-to-r from-primary to-amber-600 text-primary-foreground shadow-lg scale-105"
@@ -120,7 +120,7 @@ export default function Layout({ children }: LayoutProps) {
                       >
                         <Icon className={cn("h-4 w-4", item.highlight && !isActive && "text-primary animate-pulse")} />
                         <span>{item.label}</span>
-                      </a>
+                      </div>
                     </Link>
                   </li>
                 );

@@ -212,7 +212,7 @@ export default function AIAssistant() {
       <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3">
         {[
           "Sold 15 packs for K30 each to John",
-          "Bought flour for K350",
+          "Made 25kg flour crackers",
           "Produced 200 packs today",
           "Electricity bill K650"
         ].map((example, idx) => (

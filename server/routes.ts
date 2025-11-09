@@ -632,6 +632,7 @@ Database Entities:
 - **Expenses**: {date, categoryName, amount, description} - categoryName will be mapped to actual category ID
 - **Inventory Movements**: {date, type ("addition" | "removal"), quantity, notes}
 - **Customers**: {name, phone, location}
+- **Batch Calculations**: For production cost tracking (batchSize in kg)
 
 Your task:
 1. Understand user input like:
@@ -642,7 +643,7 @@ Your task:
 
 2. Output a JSON object representing the action to take:
    {
-     "action": "create_sale" | "create_expense" | "create_inventory" | "create_customer" | "clarify",
+     "action": "create_sale" | "create_expense" | "create_inventory" | "create_customer" | "calculate_batch" | "clarify",
      "data": { ...fields based on action... },
      "message": "Brief confirmation message"
    }
@@ -661,6 +662,9 @@ AI: {"action": "create_expense", "data": {"categoryName": "Flour", "amount": 500
 
 User: "Produced 200 packs"
 AI: {"action": "create_inventory", "data": {"type": "addition", "quantity": 200, "notes": "Production batch", "date": "${new Date().toISOString().split('T')[0]}"}, "message": "Added 200 packs to inventory"}
+
+User: "Made 25kg flour crackers"
+AI: {"action": "calculate_batch", "data": {"batchSize": 25}, "message": "Calculating production cost for 25kg batch"}
 
 Behavior Rules:
 - Always output valid JSON only (no markdown, no extra text)
@@ -769,6 +773,27 @@ Behavior Rules:
       } catch (error) {
         console.error("Error creating customer:", error);
         result = { success: false, message: "Failed to create customer. Please try again." };
+      }
+    } else if (parsedResponse.action === "calculate_batch") {
+      try {
+        const batchSize = Number(parsedResponse.data.batchSize) || 0;
+        const expenseUnits = await storage.getExpenseUnits();
+        
+        const breakdown = expenseUnits.map((unit: any) => ({
+          item: unit.item,
+          unitCost: Number(unit.unitCost),
+          cost: Number(unit.unitCost) * batchSize,
+          unit: unit.unit
+        }));
+        
+        const totalCost = breakdown.reduce((sum, item) => sum + item.cost, 0);
+        
+        const detailedMessage = `Production cost for ${batchSize}kg batch:\n${breakdown.map(b => `• ${b.item}: K${b.cost.toFixed(2)} (K${b.unitCost}/${b.unit.split('/')[1]} × ${batchSize}kg)`).join('\n')}\n\nTotal: K${totalCost.toFixed(2)}`;
+        
+        result = { success: true, data: { batchSize, breakdown, totalCost }, message: detailedMessage };
+      } catch (error) {
+        console.error("Error calculating batch cost:", error);
+        result = { success: false, message: "Failed to calculate batch cost. Please try again." };
       }
     } else if (parsedResponse.action === "clarify") {
       result = { success: true, clarification: true, message: parsedResponse.message };
