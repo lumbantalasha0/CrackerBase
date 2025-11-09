@@ -51,5 +51,5 @@ integrations = ["javascript_sendgrid:1.0.0", "javascript_database:1.0.0"]
 expertMode = true
 
 [[ports]]
-localPort = 46601
+localPort = 43023
 externalPort = 80
