@@ -1,0 +1,50 @@
+2025-11-09T20:19:01.900430727Z ✓ 2916 modules transformed.
+2025-11-09T20:19:02.219754549Z rendering chunks...
+2025-11-09T20:19:02.626957648Z computing gzip size...
+2025-11-09T20:19:02.65928582Z ../dist/index.html                              2.11 kB │ gzip:   0.83 kB
+2025-11-09T20:19:02.659315971Z ../dist/assets/index-C27MI3Vn.css              79.71 kB │ gzip:  12.77 kB
+2025-11-09T20:19:02.659494266Z ../dist/assets/purify.es-DfngIMfA.js           22.26 kB │ gzip:   8.72 kB
+2025-11-09T20:19:02.65962958Z ../dist/assets/index.es-C6IlZrkx.js           150.53 kB │ gzip:  51.48 kB
+2025-11-09T20:19:02.65964972Z ../dist/assets/html2canvas.esm-CBrSDip1.js    201.42 kB │ gzip:  48.03 kB
+2025-11-09T20:19:02.659680981Z ../dist/assets/index-DXbYQMC5.js            1,219.41 kB │ gzip: 368.04 kB
+2025-11-09T20:19:02.659775613Z 
+2025-11-09T20:19:02.659787444Z (!) Some chunks are larger than 500 kB after minification. Consider:
+2025-11-09T20:19:02.659792634Z - Using dynamic import() to code-split the application
+2025-11-09T20:19:02.659797604Z - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+2025-11-09T20:19:02.659801744Z - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+2025-11-09T20:19:02.660047051Z ✓ built in 8.89s
+2025-11-09T20:19:02.739493946Z 
+2025-11-09T20:19:02.739520936Z   dist-server/index.js  59.0kb
+2025-11-09T20:19:02.739526337Z 
+2025-11-09T20:19:02.739530937Z ⚡ Done in 6ms
+2025-11-09T20:19:04.160623826Z ==> Uploading build...
+2025-11-09T20:19:14.916906982Z ==> Uploaded in 5.7s. Compression took 5.1s
+2025-11-09T20:19:14.962379771Z ==> Build successful 🎉
+2025-11-09T20:19:18.952046097Z ==> Deploying...
+2025-11-09T20:19:44.959799796Z ==> Running 'node dist-server/index.js'
+2025-11-09T20:19:52.56268099Z 8:19:52 PM [express] serving on port 10000
+2025-11-09T20:19:53.210329108Z REQ HEAD / (content-type: )
+2025-11-09T20:20:00.063960577Z ==> Your service is live 🎉
+2025-11-09T20:20:00.150068541Z ==> 
+2025-11-09T20:20:00.192377218Z ==> ///////////////////////////////////////////////////////////
+2025-11-09T20:20:00.241281904Z ==> 
+2025-11-09T20:20:00.304862169Z ==> Available at your primary URL https://www.bemacho.site + 2 more domains
+2025-11-09T20:20:00.355115065Z ==> 
+2025-11-09T20:20:00.445749258Z ==> ///////////////////////////////////////////////////////////
+2025-11-09T20:20:12.058328887Z REQ GET / (content-type: )
+2025-11-09T20:20:26.262825097Z REQ GET / (content-type: )
+2025-11-09T20:20:26.746174476Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T20:20:26.756848005Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T20:20:33.11545735Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T20:20:33.260468566Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T20:20:33.359050731Z REQ GET /favicon.ico (content-type: )
+2025-11-09T20:20:33.654017576Z 8:20:33 PM [express] GET /api/analytics/dashboard 304 in 538ms :: {"totalSales":17619,"totalExpenses…
+2025-11-09T20:20:33.749657146Z 8:20:33 PM [express] GET /api/analytics/recent-activity 304 in 489ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T20:20:38.590619751Z REQ GET / (content-type: )
+2025-11-09T20:20:39.050832102Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T20:20:39.057436851Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T20:20:46.089237829Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T20:20:46.10537322Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T20:20:46.351985992Z 8:20:46 PM [express] GET /api/analytics/dashboard 304 in 262ms :: {"totalSales":17619,"totalExpenses…
+2025-11-09T20:20:46.453563517Z 8:20:46 PM [express] GET /api/analytics/recent-activity 304 in 348ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T20:20:46.753379331Z REQ GET /favicon.ico (content-type: )
