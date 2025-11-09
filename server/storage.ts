@@ -139,6 +139,7 @@ export class DrizzleStorage implements IStorage {
     const result = await db.insert(schema.sales)
       .values({
         ...sale,
+        pricePerUnit: sale.pricePerUnit.toString(),
         totalPrice: totalPrice.toString(),
       })
       .returning();
@@ -157,6 +158,9 @@ export class DrizzleStorage implements IStorage {
 
   async updateSale(id: number, sale: Partial<InsertSale>): Promise<any | undefined> {
     const updateData: any = { ...sale };
+    if (sale.pricePerUnit !== undefined) {
+      updateData.pricePerUnit = sale.pricePerUnit.toString();
+    }
     if (sale.pricePerUnit !== undefined && sale.quantity !== undefined) {
       updateData.totalPrice = (sale.pricePerUnit * sale.quantity).toString();
     }
@@ -210,13 +214,20 @@ export class DrizzleStorage implements IStorage {
   }
 
   async createExpense(expense: InsertExpense): Promise<any> {
-    const result = await db.insert(schema.expenses).values(expense).returning();
+    const result = await db.insert(schema.expenses).values({
+      ...expense,
+      amount: expense.amount.toString(),
+    }).returning();
     return result[0];
   }
 
   async updateExpense(id: number, expense: Partial<InsertExpense>): Promise<any | undefined> {
+    const updateData: any = { ...expense };
+    if (expense.amount !== undefined) {
+      updateData.amount = expense.amount.toString();
+    }
     const result = await db.update(schema.expenses)
-      .set(expense)
+      .set(updateData)
       .where(eq(schema.expenses.id, id))
       .returning();
     return result[0];
@@ -237,13 +248,20 @@ export class DrizzleStorage implements IStorage {
   }
 
   async createExpenseUnit(expenseUnit: InsertExpenseUnit): Promise<any> {
-    const result = await db.insert(schema.expenseUnits).values(expenseUnit).returning();
+    const result = await db.insert(schema.expenseUnits).values({
+      ...expenseUnit,
+      unitCost: expenseUnit.unitCost.toString(),
+    }).returning();
     return result[0];
   }
 
   async updateExpenseUnit(id: number, expenseUnit: Partial<InsertExpenseUnit>): Promise<any | undefined> {
+    const updateData: any = { ...expenseUnit };
+    if (expenseUnit.unitCost !== undefined) {
+      updateData.unitCost = expenseUnit.unitCost.toString();
+    }
     const result = await db.update(schema.expenseUnits)
-      .set(expenseUnit)
+      .set(updateData)
       .where(eq(schema.expenseUnits.id, id))
       .returning();
     return result[0];
