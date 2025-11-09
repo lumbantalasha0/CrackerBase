@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/queryClient";
-import { useIngredientsQuery, Ingredient } from "@/hooks/useIngredientsQuery";
+import { useExpenseUnitsQuery, ExpenseUnit } from "@/hooks/useExpenseUnits";
 import useTheme from "@/hooks/useTheme";
 import DataTable, { TableColumn } from "@/components/DataTable";
 import FormModal from "@/components/FormModal";
@@ -21,8 +21,8 @@ export default function Settings(): JSX.Element {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
 
-  // Ingredients hook (list + create + remove)
-  const ingredientsQ = useIngredientsQuery();
+  // Expense Units hook (list + create + remove + update)
+  const expenseUnitsQ = useExpenseUnitsQuery();
 
   // Expense categories queries/mutations (lightweight inline)
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<Category[]>({
@@ -30,8 +30,12 @@ export default function Settings(): JSX.Element {
     queryFn: fetchCategories,
   });
 
-  const [isAddIngredientOpen, setIsAddIngredientOpen] = useState(false);
-  const [newIngredient, setNewIngredient] = useState<{ name: string; multiplier: string }>({ name: "", multiplier: "0" });
+  const [isAddExpenseUnitOpen, setIsAddExpenseUnitOpen] = useState(false);
+  const [newExpenseUnit, setNewExpenseUnit] = useState<{ item: string; unitCost: string; unit: string }>({ 
+    item: "", 
+    unitCost: "0", 
+    unit: "Kwacha/kg" 
+  });
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
@@ -42,9 +46,10 @@ export default function Settings(): JSX.Element {
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
 
-  const ingredientColumns: TableColumn[] = [
-    { key: "name", label: "Name" },
-    { key: "multiplier", label: "Multiplier", render: (v: any) => v },
+  const expenseUnitColumns: TableColumn[] = [
+    { key: "item", label: "Item" },
+    { key: "unitCost", label: "Unit Cost (K)", render: (v: any) => `K${parseFloat(v).toFixed(2)}` },
+    { key: "unit", label: "Unit" },
   ];
 
   const categoryColumns: TableColumn[] = [
@@ -116,24 +121,28 @@ export default function Settings(): JSX.Element {
     queryFn: fetchCustomers,
   });
 
-  async function handleAddIngredient() {
-    if (!newIngredient.name || Number(newIngredient.multiplier) <= 0) return;
+  async function handleAddExpenseUnit() {
+    if (!newExpenseUnit.item || Number(newExpenseUnit.unitCost) <= 0 || !newExpenseUnit.unit) return;
     try {
-      await ingredientsQ.create.mutateAsync({ name: newIngredient.name, multiplier: Number(newIngredient.multiplier) });
-      setNewIngredient({ name: "", multiplier: "0" });
-      setIsAddIngredientOpen(false);
-      toast({ title: "Ingredient added" });
+      await expenseUnitsQ.create.mutateAsync({ 
+        item: newExpenseUnit.item, 
+        unitCost: Number(newExpenseUnit.unitCost),
+        unit: newExpenseUnit.unit
+      });
+      setNewExpenseUnit({ item: "", unitCost: "0", unit: "Kwacha/kg" });
+      setIsAddExpenseUnitOpen(false);
+      toast({ title: "Expense unit added successfully" });
     } catch (e: any) {
-      toast({ title: "Error", description: e.message || String(e), variant: "destructive" });
+      toast({ title: "Error adding expense unit", description: e.message || String(e), variant: "destructive" });
     }
   }
 
-  async function handleDeleteIngredient(row: any) {
+  async function handleDeleteExpenseUnit(row: any) {
     try {
-      await ingredientsQ.remove.mutateAsync(row.id);
-      toast({ title: "Ingredient removed" });
+      await expenseUnitsQ.remove.mutateAsync(row.id);
+      toast({ title: "Expense unit removed successfully" });
     } catch (e: any) {
-      toast({ title: "Error", description: e.message || String(e), variant: "destructive" });
+      toast({ title: "Error removing expense unit", description: e.message || String(e), variant: "destructive" });
     }
   }
 
@@ -227,33 +236,72 @@ export default function Settings(): JSX.Element {
         </div>
       </section>
 
-      {/* Ingredients */}
+      {/* Expense Units */}
       <section className="mb-8">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-medium">Ingredients</h2>
+          <h2 className="text-lg font-medium">Expense Units</h2>
           <div>
-            <Button onClick={() => setIsAddIngredientOpen(true)}>Add Ingredient</Button>
+            <Button onClick={() => setIsAddExpenseUnitOpen(true)} data-testid="button-add-expense-unit">Add Expense Unit</Button>
           </div>
         </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Configure costs per unit for production batch calculations (e.g., Flour at K20/kg, Sugar at K15/kg)
+        </p>
 
         <DataTable
-          title="Ingredients"
-          columns={ingredientColumns}
-          data={(ingredientsQ.data || []).map((ing: Ingredient) => ({ id: ing.id, name: ing.name, multiplier: ing.multiplier }))}
-          isLoading={ingredientsQ.isLoading}
-          onDelete={handleDeleteIngredient}
-          emptyMessage="No ingredients found"
+          title="Expense Units"
+          columns={expenseUnitColumns}
+          data={(expenseUnitsQ.data || []).map((unit: ExpenseUnit) => ({ 
+            id: unit.id, 
+            item: unit.item, 
+            unitCost: unit.unitCost,
+            unit: unit.unit 
+          }))}
+          isLoading={expenseUnitsQ.isLoading}
+          onDelete={handleDeleteExpenseUnit}
+          emptyMessage="No expense units configured yet"
         />
 
-  <FormModal isOpen={isAddIngredientOpen} onClose={() => setIsAddIngredientOpen(false)} title="Add Ingredient" onSubmit={handleAddIngredient} submitLabel="Add" isLoading={ingredientsQ.create.isPending}>
+        <FormModal 
+          isOpen={isAddExpenseUnitOpen} 
+          onClose={() => setIsAddExpenseUnitOpen(false)} 
+          title="Add Expense Unit" 
+          onSubmit={handleAddExpenseUnit} 
+          submitLabel="Add" 
+          isLoading={expenseUnitsQ.create.isPending}
+        >
           <div className="space-y-4">
             <div>
-              <Label>Name</Label>
-              <Input value={newIngredient.name} onChange={(e) => setNewIngredient((p) => ({ ...p, name: e.target.value }))} />
+              <Label>Item Name</Label>
+              <Input 
+                value={newExpenseUnit.item} 
+                onChange={(e) => setNewExpenseUnit((p) => ({ ...p, item: e.target.value }))}
+                placeholder="e.g., Flour, Sugar, Oil"
+                data-testid="input-expense-unit-item"
+              />
             </div>
             <div>
-              <Label>Multiplier</Label>
-              <Input type="number" value={newIngredient.multiplier} onChange={(e) => setNewIngredient((p) => ({ ...p, multiplier: e.target.value }))} />
+              <Label>Unit Cost (Kwacha)</Label>
+              <Input 
+                type="number" 
+                step="0.01"
+                value={newExpenseUnit.unitCost} 
+                onChange={(e) => setNewExpenseUnit((p) => ({ ...p, unitCost: e.target.value }))}
+                placeholder="e.g., 20.00"
+                data-testid="input-expense-unit-cost"
+              />
+            </div>
+            <div>
+              <Label>Unit Type</Label>
+              <Input 
+                value={newExpenseUnit.unit} 
+                onChange={(e) => setNewExpenseUnit((p) => ({ ...p, unit: e.target.value }))}
+                placeholder="e.g., Kwacha/kg, Kwacha/litre, Kwacha/unit"
+                data-testid="input-expense-unit-type"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Examples: Kwacha/kg, Kwacha/litre, Kwacha/unit
+              </p>
             </div>
           </div>
         </FormModal>

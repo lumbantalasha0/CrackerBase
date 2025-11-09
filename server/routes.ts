@@ -6,7 +6,7 @@ import {
   insertSaleSchema,
   insertExpenseCategorySchema,
   insertExpenseSchema,
-  insertIngredientSchema
+  insertExpenseUnitSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -408,66 +408,66 @@ router.delete("/api/expenses/:id", async (req, res) => {
   }
 });
 
-// Ingredients Routes
-router.get("/api/ingredients", async (req, res) => {
+// Expense Units Routes - tracks cost per unit for production calculations
+router.get("/api/expense-units", async (req, res) => {
   try {
-    const ingredients = await storage.getIngredients();
-    res.json(ingredients);
+    const expenseUnits = await storage.getExpenseUnits();
+    res.json(expenseUnits);
   } catch (error) {
-    console.error("Error fetching ingredients:", error);
-    res.status(500).json({ error: "Failed to fetch ingredients" });
+    console.error("Error fetching expense units:", error);
+    res.status(500).json({ error: "Failed to fetch expense units" });
   }
 });
 
-router.post("/api/ingredients", async (req, res) => {
+router.post("/api/expense-units", async (req, res) => {
   try {
-    const validatedData = insertIngredientSchema.parse(req.body);
-    const ingredient = await storage.createIngredient(validatedData);
-    res.status(201).json(ingredient);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: "Validation failed", details: error.errors });
-    } else {
-      console.error("Error creating ingredient:", error);
-      res.status(500).json({ error: "Failed to create ingredient" });
-    }
-  }
-});
-
-router.put("/api/ingredients/:id", async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    const validatedData = insertIngredientSchema.partial().parse(req.body);
-    const ingredient = await storage.updateIngredient(id, validatedData);
-    
-    if (!ingredient) {
-      return res.status(404).json({ error: "Ingredient not found" });
-    }
-    
-    res.json(ingredient);
+    const validatedData = insertExpenseUnitSchema.parse(req.body);
+    const expenseUnit = await storage.createExpenseUnit(validatedData);
+    res.status(201).json(expenseUnit);
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: "Validation failed", details: error.errors });
     } else {
-      console.error("Error updating ingredient:", error);
-      res.status(500).json({ error: "Failed to update ingredient" });
+      console.error("Error creating expense unit:", error);
+      res.status(500).json({ error: "Failed to create expense unit" });
     }
   }
 });
 
-router.delete("/api/ingredients/:id", async (req, res) => {
+router.put("/api/expense-units/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const deleted = await storage.deleteIngredient(id);
+    const validatedData = insertExpenseUnitSchema.partial().parse(req.body);
+    const expenseUnit = await storage.updateExpenseUnit(id, validatedData);
+    
+    if (!expenseUnit) {
+      return res.status(404).json({ error: "Expense unit not found" });
+    }
+    
+    res.json(expenseUnit);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: "Validation failed", details: error.errors });
+    } else {
+      console.error("Error updating expense unit:", error);
+      res.status(500).json({ error: "Failed to update expense unit" });
+    }
+  }
+});
+
+router.delete("/api/expense-units/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const deleted = await storage.deleteExpenseUnit(id);
     
     if (!deleted) {
-      return res.status(404).json({ error: "Ingredient not found" });
+      return res.status(404).json({ error: "Expense unit not found" });
     }
     
     res.status(204).send();
   } catch (error) {
-    console.error("Error deleting ingredient:", error);
-    res.status(500).json({ error: "Failed to delete ingredient" });
+    console.error("Error deleting expense unit:", error);
+    res.status(500).json({ error: "Failed to delete expense unit" });
   }
 });
 

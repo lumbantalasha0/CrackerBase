@@ -1,100 +1,120 @@
 import { useState } from "react";
-import { useIngredients } from "@/hooks/useIngredients";
+import { useExpenseUnitsQuery } from "@/hooks/useExpenseUnits";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Calculator as CalculatorIcon, Package, Info } from "lucide-react";
+import { Calculator as CalculatorIcon, DollarSign, Info, TrendingUp } from "lucide-react";
 import Badge from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-
+interface CostBreakdown {
+  item: string;
+  amount: number;
+}
 
 interface CalculationResult {
-  flourKg: number;
-  ingredients: Record<string, string>;
+  batchSize: number;
+  totalCost: number;
+  breakdown: CostBreakdown[];
 }
 
 export default function Calculator() {
-
-  const [flourAmount, setFlourAmount] = useState("");
+  const [batchSize, setBatchSize] = useState("");
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [ingredients] = useIngredients();
+  const { data: expenseUnits = [], isLoading } = useExpenseUnitsQuery();
 
   const handleCalculate = async () => {
-    const amount = parseFloat(flourAmount);
+    const amount = parseFloat(batchSize);
     if (!amount || amount <= 0) {
       return;
     }
 
     setIsCalculating(true);
     
-    // Mock calculation delay
+    // Calculate costs based on kg input
     setTimeout(() => {
-      const resultIngredients: Record<string, string> = {};
-      ingredients.forEach((ingredient: { name: string; multiplier: number }) => {
-        const calculatedAmount = amount * ingredient.multiplier;
-        const unit = ["Oil", "Water"].includes(ingredient.name) ? "ml" : "g";
-        resultIngredients[ingredient.name] = `${calculatedAmount.toFixed(1)}${unit}`;
-      });
+      const breakdown: CostBreakdown[] = expenseUnits.map((unit: any) => ({
+        item: unit.item,
+        amount: amount * parseFloat(unit.unitCost)
+      }));
+
+      const totalCost = breakdown.reduce((sum, item) => sum + item.amount, 0);
+
       setResult({
-        flourKg: amount,
-        ingredients: resultIngredients
+        batchSize: amount,
+        totalCost,
+        breakdown
       });
       setIsCalculating(false);
-    }, 800);
+    }, 500);
   };
 
   const resetCalculation = () => {
-    setFlourAmount("");
+    setBatchSize("");
     setResult(null);
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading expense units...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-300">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-heading font-bold text-foreground mb-2">
-          Ingredients Calculator
+          Production Cost Calculator
         </h1>
         <p className="text-muted-foreground">
-          Calculate ingredient quantities based on flour amount
+          Calculate total production costs based on batch size (kg of flour)
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Calculator Input */}
-        <Card>
+        <Card className="glass">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CalculatorIcon className="h-5 w-5" />
-              Calculate Ingredients
+              <CalculatorIcon className="h-5 w-5 text-primary" />
+              Calculate Batch Cost
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
-              <Label htmlFor="flour">Flour Amount (kg)</Label>
+              <Label htmlFor="batch-size">Batch Size (kg of flour)</Label>
               <Input
-                id="flour"
+                id="batch-size"
                 type="number"
                 step="0.1"
-                value={flourAmount}
-                onChange={(e) => setFlourAmount(e.target.value)}
-                placeholder="Enter flour amount in kg"
+                value={batchSize}
+                onChange={(e) => setBatchSize(e.target.value)}
+                placeholder="Enter batch size in kg"
                 min="0.1"
-                data-testid="input-flour-amount"
+                data-testid="input-batch-size"
+                className="mt-2"
               />
+              <p className="text-xs text-muted-foreground mt-2">
+                Example: Enter 25 for a 25kg batch
+              </p>
             </div>
 
             <div className="flex gap-2">
               <Button 
                 onClick={handleCalculate}
-                disabled={!flourAmount || parseFloat(flourAmount) <= 0 || isCalculating}
+                disabled={!batchSize || parseFloat(batchSize) <= 0 || isCalculating || expenseUnits.length === 0}
                 className="flex-1"
                 data-testid="button-calculate"
               >
-                {isCalculating ? "Calculating..." : "Calculate"}
+                {isCalculating ? "Calculating..." : "Calculate Cost"}
               </Button>
               
               {result && (
@@ -108,39 +128,60 @@ export default function Calculator() {
               )}
             </div>
 
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                These ratios are based on standard crackers recipes. Adjust according to your specific requirements.
-              </AlertDescription>
-            </Alert>
+            {expenseUnits.length === 0 && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  No expense units configured. Please add expense units in Settings first.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {expenseUnits.length > 0 && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Costs are calculated by multiplying each expense unit cost by the batch size (kg).
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
 
-        {/* Ingredient Ratios Reference */}
-        <Card>
+        {/* Expense Units Reference */}
+        <Card className="glass">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Standard Ratios (per 1kg flour)
+              <DollarSign className="h-5 w-5 text-primary" />
+              Expense Units (per kg/unit)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {ingredients.map((ingredient: { name: string; multiplier: number }) => {
-                const unit = ["Oil", "Water"].includes(ingredient.name) ? "ml" : "g";
-                const amount = (ingredient.multiplier * 1000).toFixed(0);
-                return (
-                  <div key={ingredient.name} className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                    <span className="font-medium capitalize">
-                      {ingredient.name}
-                    </span>
+              {expenseUnits.map((unit: any) => (
+                <div 
+                  key={unit.id} 
+                  className="flex justify-between items-center p-3 bg-accent/30 rounded-lg border border-border/30 hover-elevate"
+                >
+                  <span className="font-medium">
+                    {unit.item}
+                  </span>
+                  <div className="flex items-center gap-2">
                     <Badge variant="outline">
-                      {amount}{unit}
+                      K{parseFloat(unit.unitCost).toFixed(2)}
                     </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      /{unit.unit.split('/')[1] || 'unit'}
+                    </span>
                   </div>
-                );
-              })}
+                </div>
+              ))}
+
+              {expenseUnits.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No expense units configured yet.
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -148,39 +189,45 @@ export default function Calculator() {
 
       {/* Calculation Results */}
       {result && (
-        <Card>
+        <Card className="glass border-primary/20">
           <CardHeader>
-            <CardTitle>
-              Calculation Results for {result.flourKg}kg Flour
+            <CardTitle className="flex items-center justify-between">
+              <span>Production Cost for {result.batchSize}kg Batch</span>
+              <Badge variant="default" className="text-lg px-4 py-1">
+                K{result.totalCost.toFixed(2)}
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Object.entries(result.ingredients).map(([ingredient, amount]) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              {result.breakdown.map((item) => (
                 <div 
-                  key={ingredient} 
-                  className="p-4 bg-primary/5 border border-primary/20 rounded-lg"
-                  data-testid={`result-${ingredient.replace(' ', '-')}`}
+                  key={item.item} 
+                  className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg"
+                  data-testid={`result-${item.item.replace(' ', '-')}`}
                 >
-                  <div className="font-medium text-primary capitalize mb-1">
-                    {ingredient}
+                  <div className="font-medium text-muted-foreground mb-1">
+                    {item.item}
                   </div>
-                  <div className="text-2xl font-bold">
-                    {amount}
+                  <div className="text-2xl font-bold text-primary">
+                    K{item.amount.toFixed(2)}
                   </div>
                 </div>
               ))}
             </div>
             
-            <div className="mt-6 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+            <div className="p-4 bg-gradient-to-r from-green-50 to-amber-50 dark:from-green-950/30 dark:to-amber-950/30 border border-border rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Package className="h-4 w-4 text-green-600" />
-                <span className="font-medium text-green-800 dark:text-green-200">
-                  Total Production Estimate
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <span className="font-semibold text-foreground">
+                  Total Production Cost
                 </span>
               </div>
-              <p className="text-sm text-green-700 dark:text-green-300">
-                With {result.flourKg}kg of flour, you can produce approximately {Math.round(result.flourKg * 200)} pieces of crackers.
+              <p className="text-3xl font-bold text-primary mb-2">
+                K{result.totalCost.toFixed(2)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                For {result.batchSize}kg batch • Estimated {Math.round(result.batchSize * 200)} crackers at 200 pieces/kg
               </p>
             </div>
           </CardContent>

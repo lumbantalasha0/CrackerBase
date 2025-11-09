@@ -1,0 +1,142 @@
+⚙️ FIXES & UPGRADES SUMMARY
+1. Ingredients → Expense Units
+
+Rename “Ingredients” to Expense Units (this makes sense since it stores Kwacha per unit/kg/litre).
+
+Your structure becomes:
+
+{
+  "expense_units": [
+    { "item": "Flour", "unit_cost": 20, "unit": "Kwacha/kg" },
+    { "item": "Sugar", "unit_cost": 15, "unit": "Kwacha/kg" },
+    { "item": "Electricity", "unit_cost": 5, "unit": "Kwacha/unit" },
+    { "item": "Oil", "unit_cost": 25, "unit": "Kwacha/litre" }
+  ]
+}
+
+2. Batch Expense Calculator Logic
+
+When the user enters or says, for example:
+
+“We made 25kg flour crackers today.”
+
+The system should:
+
+Fetch each expense_unit
+
+Multiply unit_cost * 25
+
+Add them all up to calculate total production cost
+
+Auto-store under Production → {date, batch_size, total_cost, breakdown}
+
+🧮 Example output:
+
+{
+  "batch_size": 25,
+  "total_cost": 1625,
+  "breakdown": [
+    { "item": "Flour", "amount": 500 },
+    { "item": "Sugar", "amount": 375 },
+    { "item": "Electricity", "amount": 125 },
+    { "item": "Oil", "amount": 625 }
+  ]
+}
+
+3. Customer List
+
+✅ Change sorting to Ascending (A–Z).
+In your customer fetch query:
+
+SELECT * FROM customers ORDER BY name ASC;
+
+4. Layout Fix
+
+✅ The Customers tab overlapping Expenses → set a clear grid layout or z-index correction:
+
+#customers-section {
+  position: relative;
+  z-index: 2;
+}
+#expenses-section {
+  margin-top: 2rem;
+  z-index: 1;
+}
+
+5. Charts Improvement (Reports Page)
+
+Enhance visuals with Recharts or Chart.js — show:
+
+Profit Trend (Line Chart)
+
+Batch Cost Breakdown (Pie Chart)
+
+Sales vs Expenses (Bar Chart)
+
+Top Customers (Horizontal Bar Chart)
+
+Keep warm gradients (peach/amber) and smooth transitions for a premium 2025 feel.
+
+6. Rename AI
+
+✅ Rename from AI Assistant → Lumba AI
+Everywhere in UI and backend:
+
+const AI_NAME = "Lumba AI";
+
+🧠 OPTIMIZED LOW-TOKEN AI PROMPT (Straightforward & Compact)
+
+Use this in your system instruction for the model:
+
+You are Lumba AI, the assistant for BEMACHO Crackers Manager — a system that tracks sales, expenses, production, and reports for a crackers business.
+
+When the user describes daily work, convert it into structured JSON.
+
+Use this format:
+{
+  "type": "sale" | "expense" | "production",
+  "data": { ... }
+}
+
+Rules:
+- "We made 25kg" → calculate production cost using expense_units table (Kwacha per kg/unit/litre).
+- Output breakdown and total.
+- "Sold 10 packs at K30" → total = 10*30.
+- "Bought flour for K200" → expense.
+- Default date = today.
+- Always output valid JSON only.
+- Ask short clarifications if needed.
+
+Examples:
+
+User: "We made 25kg flour today"
+→
+{
+  "type": "production",
+  "data": {
+    "batch_size": 25,
+    "total_cost": 1625,
+    "breakdown": [
+      {"item":"Flour","amount":500},
+      {"item":"Sugar","amount":375},
+      {"item":"Electricity","amount":125},
+      {"item":"Oil","amount":625}
+    ]
+  }
+}
+
+User: "Sold 10 BBQ crackers at K30 to Mwansa"
+→
+{
+  "type": "sale",
+  "data": {"customer":"Mwansa","product":"BBQ Crackers","qty":10,"price":30,"total":300}
+}
+
+✅ Summary of What You’ll Get After These Fixes
+Feature	Fixed Behavior
+Ingredients Tab	Becomes “Expense Units” (Kwacha/kg etc.)
+Calculator	Auto-calculates full batch cost based on entered Kg
+AI	Renamed to “Lumba AI” and understands natural inputs
+Customer List	Sorted A → Z
+Layout	Tabs no longer overlap
+Charts	More dynamic + readable + beautiful reports

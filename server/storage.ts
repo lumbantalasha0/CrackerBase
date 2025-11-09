@@ -7,7 +7,7 @@ import type {
   InsertSale,
   InsertExpenseCategory,
   InsertExpense,
-  InsertIngredient,
+  InsertExpenseUnit,
 } from '@shared/schema';
 
 export interface IStorage {
@@ -42,11 +42,11 @@ export interface IStorage {
   updateExpense(id: number, expense: Partial<InsertExpense>): Promise<any | undefined>;
   deleteExpense(id: number): Promise<boolean>;
 
-  getIngredients(): Promise<any[]>;
-  getIngredient(id: number): Promise<any | undefined>;
-  createIngredient(ingredient: InsertIngredient): Promise<any>;
-  updateIngredient(id: number, ingredient: Partial<InsertIngredient>): Promise<any | undefined>;
-  deleteIngredient(id: number): Promise<boolean>;
+  getExpenseUnits(): Promise<any[]>;
+  getExpenseUnit(id: number): Promise<any | undefined>;
+  createExpenseUnit(expenseUnit: InsertExpenseUnit): Promise<any>;
+  updateExpenseUnit(id: number, expenseUnit: Partial<InsertExpenseUnit>): Promise<any | undefined>;
+  deleteExpenseUnit(id: number): Promise<boolean>;
 
   getSetting(key: string): Promise<string | undefined>;
   setSetting(key: string, value: string): Promise<void>;
@@ -54,7 +54,7 @@ export interface IStorage {
 
 export class DrizzleStorage implements IStorage {
   async getCustomers(): Promise<any[]> {
-    return await db.select().from(schema.customers).orderBy(desc(schema.customers.createdAt));
+    return await db.select().from(schema.customers).orderBy(schema.customers.name); // A-Z sorting
   }
 
   async getCustomer(id: number): Promise<any | undefined> {
@@ -227,30 +227,30 @@ export class DrizzleStorage implements IStorage {
     return true;
   }
 
-  async getIngredients(): Promise<any[]> {
-    return await db.select().from(schema.ingredients).orderBy(desc(schema.ingredients.createdAt));
+  async getExpenseUnits(): Promise<any[]> {
+    return await db.select().from(schema.expenseUnits).orderBy(desc(schema.expenseUnits.createdAt));
   }
 
-  async getIngredient(id: number): Promise<any | undefined> {
-    const result = await db.select().from(schema.ingredients).where(eq(schema.ingredients.id, id));
+  async getExpenseUnit(id: number): Promise<any | undefined> {
+    const result = await db.select().from(schema.expenseUnits).where(eq(schema.expenseUnits.id, id));
     return result[0];
   }
 
-  async createIngredient(ingredient: InsertIngredient): Promise<any> {
-    const result = await db.insert(schema.ingredients).values(ingredient).returning();
+  async createExpenseUnit(expenseUnit: InsertExpenseUnit): Promise<any> {
+    const result = await db.insert(schema.expenseUnits).values(expenseUnit).returning();
     return result[0];
   }
 
-  async updateIngredient(id: number, ingredient: Partial<InsertIngredient>): Promise<any | undefined> {
-    const result = await db.update(schema.ingredients)
-      .set(ingredient)
-      .where(eq(schema.ingredients.id, id))
+  async updateExpenseUnit(id: number, expenseUnit: Partial<InsertExpenseUnit>): Promise<any | undefined> {
+    const result = await db.update(schema.expenseUnits)
+      .set(expenseUnit)
+      .where(eq(schema.expenseUnits.id, id))
       .returning();
     return result[0];
   }
 
-  async deleteIngredient(id: number): Promise<boolean> {
-    await db.delete(schema.ingredients).where(eq(schema.ingredients.id, id));
+  async deleteExpenseUnit(id: number): Promise<boolean> {
+    await db.delete(schema.expenseUnits).where(eq(schema.expenseUnits.id, id));
     return true;
   }
 

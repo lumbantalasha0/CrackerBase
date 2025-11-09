@@ -53,12 +53,12 @@ export const expenses = pgTable("expenses", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Ingredients table for calculator
-export const ingredients = pgTable("ingredients", {
+// Expense Units table - tracks cost per unit for production calculations
+export const expenseUnits = pgTable("expense_units", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  multiplier: decimal("multiplier", { precision: 10, scale: 4 }).notNull(), // Ratio per 1kg flour
-  unit: text("unit").notNull().default("g"), // 'g', 'ml', 'kg', 'l'
+  item: text("item").notNull(), // e.g., "Flour", "Sugar", "Oil", "Electricity"
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }).notNull(), // Kwacha per unit
+  unit: text("unit").notNull().default("Kwacha/kg"), // e.g., "Kwacha/kg", "Kwacha/litre", "Kwacha/unit"
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -122,13 +122,13 @@ export const insertExpenseSchema = createInsertSchema(expenses).omit({
   status: z.enum(["pending", "approved"]).default("approved"),
 });
 
-export const insertIngredientSchema = createInsertSchema(ingredients).omit({
+export const insertExpenseUnitSchema = createInsertSchema(expenseUnits).omit({
   id: true,
   createdAt: true,
 }).extend({
-  name: z.string().min(1, "Ingredient name is required"),
-  multiplier: z.number().positive("Multiplier must be positive"),
-  unit: z.string().default("g"),
+  item: z.string().min(1, "Item name is required"),
+  unitCost: z.number().positive("Unit cost must be positive"),
+  unit: z.string().default("Kwacha/kg"),
 });
 
 // Type exports
@@ -147,7 +147,7 @@ export type InsertExpenseCategory = z.infer<typeof insertExpenseCategorySchema>;
 export type Expense = typeof expenses.$inferSelect;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 
-export type Ingredient = typeof ingredients.$inferSelect;
-export type InsertIngredient = z.infer<typeof insertIngredientSchema>;
+export type ExpenseUnit = typeof expenseUnits.$inferSelect;
+export type InsertExpenseUnit = z.infer<typeof insertExpenseUnitSchema>;
 
 export type Setting = typeof settings.$inferSelect;
