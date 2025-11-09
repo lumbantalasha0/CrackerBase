@@ -43,12 +43,12 @@ export default function FormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] gap-6">
+      <DialogContent className="sm:max-w-[500px] gap-6 glass-heavy border-primary/20 shadow-2xl animate-slide-up">
         <form onSubmit={handleSubmit}>
           <DialogHeader className="space-y-3">
-            <DialogTitle className="text-2xl">{title}</DialogTitle>
+            <DialogTitle className="text-2xl bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">{title}</DialogTitle>
             {description && (
-              <DialogDescription className="text-base">{description}</DialogDescription>
+              <DialogDescription className="text-base text-muted-foreground">{description}</DialogDescription>
             )}
           </DialogHeader>
           
@@ -62,6 +62,7 @@ export default function FormModal({
               variant="outline"
               onClick={onClose}
               data-testid="button-cancel-modal"
+              className="shadow-sm hover:shadow-md"
             >
               {cancelLabel}
             </Button>
@@ -69,6 +70,7 @@ export default function FormModal({
               type="submit"
               disabled={submitDisabled || isLoading || isSubmitting}
               data-testid="button-submit-modal"
+              className="shadow-sm hover:shadow-md"
             >
               {isLoading || isSubmitting ? "Processing..." : submitLabel}
             </Button>

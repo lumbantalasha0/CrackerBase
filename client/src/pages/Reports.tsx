@@ -29,9 +29,10 @@ export default function Reports() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEmailing, setIsEmailing] = useState(false);
   const { toast } = useToast();
+  const [granularity, setGranularity] = useState<'daily' | 'monthly'>('daily');
 
   // Fetch analytics summary
-  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+  const { data: analytics, isLoading: analyticsLoading} = useQuery({
     queryKey: ["/api/analytics/dashboard"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/analytics/dashboard");
@@ -55,8 +56,6 @@ export default function Reports() {
       return res.json();
     },
   });
-
-  const [granularity, setGranularity] = useState<'daily' | 'monthly'>('daily');
 
   // client-side monthly aggregation when granularity === 'monthly'
   const salesChartData = useMemo(() => {
