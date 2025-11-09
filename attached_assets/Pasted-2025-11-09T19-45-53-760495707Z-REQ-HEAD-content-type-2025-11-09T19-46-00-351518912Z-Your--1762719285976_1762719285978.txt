@@ -1,0 +1,200 @@
+2025-11-09T19:45:53.760495707Z REQ HEAD / (content-type: )
+2025-11-09T19:46:00.351518912Z ==> Your service is live 🎉
+2025-11-09T19:46:00.411031907Z ==> 
+2025-11-09T19:46:00.480255912Z ==> ///////////////////////////////////////////////////////////
+2025-11-09T19:46:00.526896619Z ==> 
+2025-11-09T19:46:00.567062976Z ==> Available at your primary URL https://crackerbase.onrender.com
+2025-11-09T19:46:00.604709763Z ==> 
+2025-11-09T19:46:00.64330649Z ==> ///////////////////////////////////////////////////////////
+2025-11-09T19:46:08.796311536Z REQ GET /settings (content-type: )
+2025-11-09T19:46:09.723823818Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T19:46:09.734726829Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T19:46:15.361315236Z REQ GET /api/expense-categories (content-type: )
+2025-11-09T19:46:15.485843538Z REQ GET /api/customers (content-type: )
+2025-11-09T19:46:15.596758293Z REQ GET /api/ingredients (content-type: )
+2025-11-09T19:46:15.615770189Z 7:46:15 PM [express] GET /api/ingredients 200 in 2ms
+2025-11-09T19:46:16.065865743Z 7:46:16 PM [express] GET /api/expense-categories 304 in 704ms :: [{"id":1,"name":"Flour","color":"bl…
+2025-11-09T19:46:16.11018066Z REQ GET /favicon.ico (content-type: )
+2025-11-09T19:46:16.835677841Z 7:46:16 PM [express] GET /api/customers 304 in 1350ms :: [{"id":1,"name":"K Mills","phone":"07793248…
+2025-11-09T19:46:17.217188647Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T19:46:17.479012479Z 7:46:17 PM [express] GET /api/analytics/recent-activity 200 in 261ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T19:46:24.337108301Z REQ GET / (content-type: )
+2025-11-09T19:46:24.928045167Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T19:46:26.115166115Z REQ GET /favicon.ico (content-type: )
+2025-11-09T19:46:42.825657874Z REQ GET / (content-type: )
+2025-11-09T19:46:43.680630606Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T19:46:43.683564625Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T19:46:52.400634162Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T19:46:52.410325338Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T19:46:52.486189764Z REQ GET /favicon.ico (content-type: )
+2025-11-09T19:46:52.697541863Z 7:46:52 PM [express] GET /api/analytics/dashboard 304 in 300ms :: {"totalSales":17619,"totalExpenses…
+2025-11-09T19:46:52.883627121Z 7:46:52 PM [express] GET /api/analytics/recent-activity 304 in 473ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T19:48:30.289939129Z REQ GET / (content-type: )
+2025-11-09T19:48:31.253112818Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T19:48:31.255606658Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T19:48:32.341075163Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T19:48:32.434091636Z REQ GET /favicon.ico (content-type: )
+2025-11-09T19:48:32.601104587Z 7:48:32 PM [express] GET /api/analytics/dashboard 304 in 260ms :: {"totalSales":17619,"totalExpenses…
+2025-11-09T19:48:32.998567573Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T19:48:33.102914016Z 7:48:33 PM [express] GET /api/analytics/recent-activity 304 in 104ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T19:48:35.43568973Z REQ GET /api/customers (content-type: )
+2025-11-09T19:48:35.435709741Z REQ GET /api/expense-categories (content-type: )
+2025-11-09T19:48:35.436538618Z REQ GET /favicon.ico (content-type: )
+2025-11-09T19:48:35.452006011Z REQ GET /api/ingredients (content-type: )
+2025-11-09T19:48:35.453379129Z 7:48:35 PM [express] GET /api/ingredients 200 in 2ms
+2025-11-09T19:48:35.487857827Z 7:48:35 PM [express] GET /api/expense-categories 304 in 52ms :: [{"id":1,"name":"Flour","color":"blu…
+2025-11-09T19:48:35.535661584Z 7:48:35 PM [express] GET /api/customers 304 in 101ms :: [{"id":1,"name":"K Mills","phone":"077932488…
+2025-11-09T19:50:57.390056742Z ==> Detected service running on port 10000
+2025-11-09T19:50:57.545233041Z ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+2025-11-09T19:53:44.384506451Z REQ GET / (content-type: application/octet-stream)
+2025-11-09T19:53:52.827259127Z REQ GET / (content-type: application/octet-stream)
+2025-11-09T19:54:06.240562584Z REQ GET / (content-type: application/octet-stream)
+2025-11-09T19:55:10.493278727Z Deploy cancelled
+2025-11-09T19:55:11.808429163Z ==> Deploying...
+2025-11-09T19:55:43.614874907Z ==> Running 'node dist/index.js'
+2025-11-09T19:55:43.81946417Z node:internal/modules/cjs/loader:1404
+2025-11-09T19:55:43.819484161Z   throw err;
+2025-11-09T19:55:43.819545491Z   ^
+2025-11-09T19:55:43.819548062Z 
+2025-11-09T19:55:43.819550851Z Error: Cannot find module '/opt/render/project/src/dist/index.js'
+2025-11-09T19:55:43.819553022Z     at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)
+2025-11-09T19:55:43.819555151Z     at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)
+2025-11-09T19:55:43.819557311Z     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)
+2025-11-09T19:55:43.819559912Z     at Function._load (node:internal/modules/cjs/loader:1211:37)
+2025-11-09T19:55:43.819562032Z     at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+2025-11-09T19:55:43.819564142Z     at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+2025-11-09T19:55:43.819566682Z     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+2025-11-09T19:55:43.819569932Z     at node:internal/main/run_main_module:36:49 {
+2025-11-09T19:55:43.819572582Z   code: 'MODULE_NOT_FOUND',
+2025-11-09T19:55:43.819575272Z   requireStack: []
+2025-11-09T19:55:43.819577392Z }
+2025-11-09T19:55:43.819579242Z 
+2025-11-09T19:55:43.819581202Z Node.js v22.16.0
+2025-11-09T19:55:45.234083644Z ==> Exited with status 1
+2025-11-09T19:55:45.250379673Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2025-11-09T19:55:51.813807126Z ==> Running 'node dist/index.js'
+2025-11-09T19:55:52.012656319Z node:internal/modules/cjs/loader:1404
+2025-11-09T19:55:52.012673989Z   throw err;
+2025-11-09T19:55:52.012677119Z   ^
+2025-11-09T19:55:52.012679589Z 
+2025-11-09T19:55:52.012682739Z Error: Cannot find module '/opt/render/project/src/dist/index.js'
+2025-11-09T19:55:52.01268537Z     at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)
+2025-11-09T19:55:52.01268793Z     at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)
+2025-11-09T19:55:52.012690439Z     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)
+2025-11-09T19:55:52.012693939Z     at Function._load (node:internal/modules/cjs/loader:1211:37)
+2025-11-09T19:55:52.01269945Z     at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+2025-11-09T19:55:52.01270185Z     at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+2025-11-09T19:55:52.01270458Z     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+2025-11-09T19:55:52.01270817Z     at node:internal/main/run_main_module:36:49 {
+2025-11-09T19:55:52.01271102Z   code: 'MODULE_NOT_FOUND',
+2025-11-09T19:55:52.01271389Z   requireStack: []
+2025-11-09T19:55:52.01271631Z }
+2025-11-09T19:55:52.01271863Z 
+2025-11-09T19:55:52.01272153Z Node.js v22.16.0
+2025-11-09T19:56:59.509690482Z REQ GET / (content-type: )
+2025-11-09T19:57:00.062020873Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T19:57:00.699764422Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T19:57:01.317185229Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T19:57:01.340235726Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T19:57:02.059167996Z REQ GET /favicon.ico (content-type: )
+2025-11-09T19:57:02.639971253Z 7:57:02 PM [express] GET /api/analytics/recent-activity 304 in 1323ms :: [{"id":"sale-43","type":"sa…
+2025-11-09T19:57:02.647863913Z 7:57:02 PM [express] GET /api/analytics/dashboard 304 in 1307ms :: {"totalSales":17619,"totalExpense…
+2025-11-09T19:57:31.35617966Z ==> Deploying...
+2025-11-09T19:58:05.266953307Z ==> Exited with status 1
+2025-11-09T19:58:05.284297156Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2025-11-09T19:58:11.291629911Z     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+2025-11-09T19:58:11.291635471Z     at node:internal/main/run_main_module:36:49 {
+2025-11-09T19:58:11.291638471Z   code: 'MODULE_NOT_FOUND',
+2025-11-09T19:58:11.291641672Z   requireStack: []
+2025-11-09T19:58:11.291644072Z }
+2025-11-09T19:58:11.291646142Z 
+2025-11-09T19:58:11.291648322Z Node.js v22.16.0
+2025-11-09T19:59:13.449151243Z ==> Deploying...
+2025-11-09T19:59:49.188913841Z ==> Running 'node dist-server/index.js'
+2025-11-09T19:59:56.690579355Z 7:59:56 PM [express] serving on port 10000
+2025-11-09T19:59:57.494436428Z REQ HEAD / (content-type: )
+2025-11-09T20:00:06.100562121Z ==> Your service is live 🎉
+2025-11-09T20:00:06.24550782Z ==> 
+2025-11-09T20:00:06.314492584Z ==> ///////////////////////////////////////////////////////////
+2025-11-09T20:00:06.379158319Z ==> 
+2025-11-09T20:00:07.295753039Z ==> Available at your primary URL https://www.bemacho.site + 2 more domains
+2025-11-09T20:00:07.338557466Z ==> 
+2025-11-09T20:00:07.381544663Z ==> ///////////////////////////////////////////////////////////
+2025-11-09T20:00:13.04653109Z REQ GET / (content-type: )
+2025-11-09T20:00:13.553490239Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T20:00:14.201289428Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T20:00:14.858751235Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T20:00:14.989556926Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T20:00:15.083274454Z REQ GET /favicon.ico (content-type: )
+2025-11-09T20:00:15.481314817Z 8:00:15 PM [express] GET /api/analytics/recent-activity 304 in 622ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T20:00:15.485571551Z 8:00:15 PM [express] GET /api/analytics/dashboard 304 in 496ms :: {"totalSales":17619,"totalExpenses…
+2025-11-09T20:00:17.184923142Z REQ GET / (content-type: )
+2025-11-09T20:04:59.514155739Z ==> Detected service running on port 10000
+2025-11-09T20:04:59.624551881Z ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+2025-11-09T20:06:35.300186087Z ==> Deploying...
+2025-11-09T20:07:01.804097957Z ==> Running 'node dist-server/index.js'
+2025-11-09T20:07:08.809703353Z 8:07:08 PM [express] serving on port 10000
+2025-11-09T20:07:09.145649959Z REQ HEAD / (content-type: )
+2025-11-09T20:07:16.768503088Z ==> Your service is live 🎉
+2025-11-09T20:07:16.87076343Z ==> 
+2025-11-09T20:07:16.925942056Z ==> ///////////////////////////////////////////////////////////
+2025-11-09T20:07:16.976513852Z ==> 
+2025-11-09T20:07:17.039068997Z ==> Available at your primary URL https://www.bemacho.site + 2 more domains
+2025-11-09T20:07:17.077063834Z ==> 
+2025-11-09T20:07:17.116010161Z ==> ///////////////////////////////////////////////////////////
+2025-11-09T20:07:19.763924502Z REQ GET / (content-type: )
+2025-11-09T20:07:23.60333853Z REQ GET / (content-type: )
+2025-11-09T20:07:24.057883928Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T20:07:24.068916022Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T20:07:28.812025519Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T20:07:29.105705685Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T20:07:29.111156917Z REQ GET /favicon.ico (content-type: )
+2025-11-09T20:07:29.505323012Z 8:07:29 PM [express] GET /api/analytics/dashboard 304 in 693ms :: {"totalSales":17619,"totalExpenses…
+2025-11-09T20:07:29.513228882Z 8:07:29 PM [express] GET /api/analytics/recent-activity 304 in 407ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T20:08:01.161690798Z REQ GET / (content-type: )
+2025-11-09T20:08:01.685650843Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T20:08:01.873888962Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T20:08:02.39718135Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T20:08:02.42540923Z REQ GET /favicon.ico (content-type: )
+2025-11-09T20:08:02.701022517Z 8:08:02 PM [express] GET /api/analytics/recent-activity 304 in 304ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T20:08:03.0840631Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T20:08:03.339810594Z 8:08:03 PM [express] GET /api/analytics/dashboard 304 in 256ms :: {"totalSales":17619,"totalExpenses…
+2025-11-09T20:08:03.879517891Z ==> Running 'node dist-server/index.js'
+2025-11-09T20:08:10.270304213Z 8:08:10 PM [express] serving on port 10000
+2025-11-09T20:08:10.835026778Z REQ HEAD / (content-type: )
+2025-11-09T20:11:13.732518884Z ==> Deploying...
+2025-11-09T20:11:41.734436093Z ==> Running 'node dist-server/index.js'
+2025-11-09T20:11:48.734111843Z 8:11:48 PM [express] serving on port 10000
+2025-11-09T20:11:48.827202384Z REQ HEAD / (content-type: )
+2025-11-09T20:11:54.833182341Z ==> Your service is live 🎉
+2025-11-09T20:11:54.954992091Z ==> 
+2025-11-09T20:11:54.997001348Z ==> ///////////////////////////////////////////////////////////
+2025-11-09T20:11:55.066491003Z ==> 
+2025-11-09T20:11:55.223072331Z ==> Available at your primary URL https://www.bemacho.site + 2 more domains
+2025-11-09T20:11:55.36118262Z ==> 
+2025-11-09T20:11:55.427130905Z ==> ///////////////////////////////////////////////////////////
+2025-11-09T20:11:58.326392301Z REQ GET / (content-type: )
+2025-11-09T20:12:05.328538874Z REQ GET / (content-type: )
+2025-11-09T20:12:06.10527767Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T20:12:06.108980003Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T20:12:19.747740121Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T20:12:19.939542116Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T20:12:20.03327441Z REQ GET /favicon.ico (content-type: )
+2025-11-09T20:12:20.426469108Z 8:12:20 PM [express] GET /api/analytics/recent-activity 304 in 679ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T20:12:20.430962537Z 8:12:20 PM [express] GET /api/analytics/dashboard 304 in 491ms :: {"totalSales":17619,"totalExpenses…
+2025-11-09T20:12:32.026097921Z REQ GET / (content-type: )
+2025-11-09T20:12:33.10184189Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T20:12:33.794347519Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T20:12:48.307504997Z REQ GET /favicon.ico (content-type: )
+2025-11-09T20:12:48.312457735Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T20:12:48.321582015Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T20:12:48.575731833Z 8:12:48 PM [express] GET /api/analytics/dashboard 304 in 263ms :: {"totalSales":17619,"totalExpenses…
+2025-11-09T20:12:48.630034787Z 8:12:48 PM [express] GET /api/analytics/recent-activity 304 in 308ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T20:13:19.329256884Z REQ GET / (content-type: )
+2025-11-09T20:13:20.043702635Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T20:13:20.056288534Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T20:13:32.694716282Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T20:13:32.700313313Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T20:13:32.802357681Z REQ GET /favicon.ico (content-type: )
+2025-11-09T20:13:32.953769586Z 8:13:32 PM [express] GET /api/analytics/recent-activity 200 in 259ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T20:13:32.957360597Z 8:13:32 PM [express] GET /api/analytics/dashboard 200 in 257ms :: {"totalSales":17619,"totalExpenses…
