@@ -1,0 +1,50 @@
+2025-11-09T17:24:41.546949713Z ==> Your service is live 🎉
+2025-11-09T17:24:41.594676808Z ==> 
+2025-11-09T17:24:41.637240905Z ==> ///////////////////////////////////////////////////////////
+2025-11-09T17:24:41.683926742Z ==> 
+2025-11-09T17:24:41.729545478Z ==> Available at your primary URL https://crackerbase.onrender.com
+2025-11-09T17:24:41.778106744Z ==> 
+2025-11-09T17:24:41.82772961Z ==> ///////////////////////////////////////////////////////////
+2025-11-09T17:25:25.420895669Z REQ GET / (content-type: )
+2025-11-09T17:25:25.968970645Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T17:25:25.969895578Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T17:25:30.531370664Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T17:25:30.578615336Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T17:25:30.629188179Z REQ GET /favicon.ico (content-type: )
+2025-11-09T17:25:30.841075117Z 5:25:30 PM [express] GET /api/analytics/recent-activity 304 in 310ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T17:25:30.930142291Z 5:25:30 PM [express] GET /api/analytics/dashboard 304 in 351ms :: {"totalSales":17619,"totalExpenses…
+2025-11-09T17:25:41.210785744Z  ELIFECYCLE  Command failed.
+2025-11-09T17:28:52.103920084Z REQ GET / (content-type: )
+2025-11-09T17:28:52.364446657Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T17:28:52.952645022Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T17:28:52.956735736Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T17:28:53.029309977Z REQ GET /favicon.ico (content-type: )
+2025-11-09T17:28:53.327916788Z 5:28:53 PM [express] GET /api/analytics/recent-activity 200 in 371ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T17:28:53.329648487Z 5:28:53 PM [express] GET /api/analytics/dashboard 200 in 377ms :: {"totalSales":17619,"totalExpenses…
+2025-11-09T17:29:18.370767714Z REQ GET / (content-type: )
+2025-11-09T17:29:18.98869635Z REQ GET /assets/index-D75MHcUs.css (content-type: )
+2025-11-09T17:29:19.033322133Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T17:29:19.803611475Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T17:29:19.851884786Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T17:29:19.863962797Z REQ GET /favicon.ico (content-type: )
+2025-11-09T17:29:20.058537597Z 5:29:20 PM [express] GET /api/analytics/dashboard 304 in 255ms :: {"totalSales":17619,"totalExpenses…
+2025-11-09T17:29:20.108184877Z 5:29:20 PM [express] GET /api/analytics/recent-activity 304 in 256ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T17:29:36.322044825Z REQ GET / (content-type: )
+2025-11-09T17:29:36.462089796Z REQ GET /assets/index-BBVXMVgq.js (content-type: )
+2025-11-09T17:29:36.795228342Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T17:29:36.816294487Z REQ GET /favicon.ico (content-type: )
+2025-11-09T17:29:36.920450785Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T17:29:37.048520681Z 5:29:37 PM [express] GET /api/analytics/recent-activity 200 in 253ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T17:29:37.178853497Z 5:29:37 PM [express] GET /api/analytics/dashboard 200 in 258ms :: {"totalSales":17619,"totalExpenses…
+2025-11-09T17:30:07.787784832Z ==> Running 'pnpm run start'
+2025-11-09T17:30:12.091012211Z 
+2025-11-09T17:30:12.091039911Z > rest-express@1.0.0 start /opt/render/project/src
+2025-11-09T17:30:12.091046671Z > NODE_ENV=production node dist-server/index.js
+2025-11-09T17:30:12.091050001Z 
+2025-11-09T17:30:20.702380036Z 5:30:20 PM [express] serving on port 10000
+2025-11-09T17:30:45.391062059Z REQ GET /favicon.ico (content-type: )
+2025-11-09T17:30:45.401753855Z REQ GET /api/analytics/recent-activity (content-type: )
+2025-11-09T17:30:45.689244847Z REQ GET /api/analytics/dashboard (content-type: )
+2025-11-09T17:30:46.289380284Z 5:30:46 PM [express] GET /api/analytics/recent-activity 200 in 888ms :: [{"id":"sale-43","type":"sal…
+2025-11-09T17:30:46.384253827Z 5:30:46 PM [express] GET /api/analytics/dashboard 200 in 694ms :: {"totalSales":17619,"totalExpenses…
+2025-11-09T17:31:22.732701776Z  ELIFECYCLE  Command failed.
