@@ -14,17 +14,17 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  --background: 45 15% 97%;
+  --background: 35 25% 96%;
 
-  --foreground: 220 15% 25%;
+  --foreground: 220 20% 20%;
 
-  --border: 210 15% 88%;
+  --border: 35 20% 85%;
 
   --card: 0 0% 100%;
 
-  --card-foreground: 220 15% 25%;
+  --card-foreground: 220 20% 20%;
 
-  --card-border: 210 15% 90%;
+  --card-border: 35 15% 88%;
 
   --sidebar: 45 10% 95%;
 
@@ -324,5 +324,119 @@
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
+  }
+
+  /* Glass Morphism Utilities */
+  .glass {
+    background-color: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .dark .glass {
+    background-color: rgba(30, 30, 40, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-light {
+    background-color: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(8px) saturate(150%);
+    -webkit-backdrop-filter: blur(8px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  .dark .glass-light {
+    background-color: rgba(30, 30, 40, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-heavy {
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px) saturate(200%);
+    -webkit-backdrop-filter: blur(16px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+
+  .dark .glass-heavy {
+    background-color: rgba(30, 30, 40, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  /* Gradient Backgrounds */
+  .gradient-warm {
+    background: linear-gradient(135deg, hsl(35 80% 94%) 0%, hsl(45 70% 96%) 50%, hsl(25 75% 95%) 100%);
+  }
+
+  .dark .gradient-warm {
+    background: linear-gradient(135deg, hsl(220 15% 12%) 0%, hsl(230 15% 14%) 50%, hsl(210 15% 13%) 100%);
+  }
+
+  .gradient-mesh {
+    background: 
+      radial-gradient(at 0% 0%, hsl(34 85% 88%) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsl(45 85% 90%) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsl(25 80% 92%) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsl(40 75% 94%) 0px, transparent 50%);
+  }
+
+  .dark .gradient-mesh {
+    background: 
+      radial-gradient(at 0% 0%, hsl(220 20% 15%) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsl(230 20% 16%) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsl(210 20% 14%) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsl(220 18% 15%) 0px, transparent 50%);
+  }
+
+  /* Smooth Animations */
+  .animate-slide-up {
+    animation: slide-up 0.3s ease-out forwards;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.2s ease-out forwards;
+  }
+
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Backdrop blur support */
+  @supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
+    .supports-blur {
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
   }
 }

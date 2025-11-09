@@ -26,12 +26,12 @@ export default function Layout({ children }: LayoutProps) {
   }, [location]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen gradient-warm">
       {/* Header */}
-      <header className="border-b border-border bg-card">
+      <header className="border-b border-border/50 glass-light sticky top-0 z-40 backdrop-blur-md">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <h1 className="text-2xl font-bold text-foreground">BEMACHO Crackers</h1>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary via-amber-600 to-primary bg-clip-text text-transparent">BEMACHO Crackers</h1>
             <p className="hidden sm:inline text-sm text-muted-foreground">Professional business management</p>
           </div>
 
@@ -57,7 +57,7 @@ export default function Layout({ children }: LayoutProps) {
                   className="fixed inset-0 bg-black/20 z-40 sm:hidden animate-in fade-in duration-200"
                   onClick={() => setMobileOpen(false)}
                 />
-                <div className="fixed left-4 top-16 z-50 w-64 bg-card border border-border rounded-lg shadow-lg p-3 animate-in slide-in-from-top-5 duration-200">
+                <div className="fixed left-4 top-16 z-50 w-64 glass border border-border/50 rounded-xl shadow-2xl p-3 animate-slide-up">
                   <ul className="space-y-1">
                     {navigationItems.map((item) => {
                       const Icon = item.icon;
@@ -91,9 +91,9 @@ export default function Layout({ children }: LayoutProps) {
 
       <div className="flex">
         {/* Sidebar (hidden on small screens) */}
-        <aside className="hidden sm:block w-64 bg-card border-r border-border min-h-[calc(100vh-81px)] sticky top-0">
+        <aside className="hidden sm:block w-64 glass-light border-r border-border/50 min-h-[calc(100vh-81px)] sticky top-[81px]">
           <nav className="p-4">
-            <ul className="space-y-1.5">
+            <ul className="space-y-2">
               {navigationItems.map((item) => {
                 const isActive = location === item.href;
                 const Icon = item.icon;
@@ -102,10 +102,10 @@ export default function Layout({ children }: LayoutProps) {
                     <Link href={item.href}>
                       <a
                         className={cn(
-                          "flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                          "flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300",
                           isActive
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground hover:bg-accent hover:shadow-sm"
+                            ? "bg-gradient-to-r from-primary to-amber-600 text-primary-foreground shadow-lg scale-105"
+                            : "text-muted-foreground hover:text-foreground hover:bg-background/40 hover:shadow-md hover:scale-102"
                         )}
                         data-testid={`link-${item.href.slice(1) || 'dashboard'}`}
                       >

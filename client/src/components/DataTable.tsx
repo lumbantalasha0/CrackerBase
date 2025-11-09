@@ -95,12 +95,12 @@ export default function DataTable({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="glass-heavy shadow-lg rounded-2xl p-6 space-y-5 animate-slide-up">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-        <h2 className="text-2xl font-bold">{title}</h2>
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">{title}</h2>
         {onAdd && (
-          <Button onClick={onAdd} className="flex items-center gap-2 w-full sm:w-auto" data-testid={`button-add-${title.toLowerCase().replace(/\s/g, '-')}`}>
+          <Button onClick={onAdd} className="flex items-center gap-2 w-full sm:w-auto shadow-md hover:shadow-lg" data-testid={`button-add-${title.toLowerCase().replace(/\s/g, '-')}`}>
             <Plus className="h-4 w-4" />
             <span>{addLabel}</span>
           </Button>

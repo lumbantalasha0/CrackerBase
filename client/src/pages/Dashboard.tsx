@@ -95,13 +95,13 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-6 animate-fade-in">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-heading font-bold text-foreground mb-2">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-amber-600 to-primary bg-clip-text text-transparent">
           BEMACHO Crackers Dashboard
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-lg">
           Overview of your crackers business performance
         </p>
       </div>
@@ -173,9 +173,9 @@ export default function Dashboard() {
         <div className="space-y-6">
           {/* Low Stock Alert */}
           {lowStockItems.length > 0 && (
-            <Card>
+            <Card className="glass-heavy border-amber-300/40 shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-orange-600">
+                <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
                   <AlertTriangle className="h-5 w-5" />
                   Low Stock Alert
                 </CardTitle>
@@ -185,7 +185,7 @@ export default function Dashboard() {
                   {lowStockItems.map((item, index) => (
                     <div 
                       key={index} 
-                      className="flex justify-between items-center p-3 bg-orange-50 dark:bg-orange-950 rounded-lg"
+                      className="flex justify-between items-center p-3 bg-gradient-to-r from-amber-50/80 to-orange-50/60 dark:from-amber-950/60 dark:to-orange-950/40 rounded-xl border border-amber-200/40 dark:border-amber-800/40"
                     >
                       <div>
                         <p className="font-medium text-sm">{item.name}</p>

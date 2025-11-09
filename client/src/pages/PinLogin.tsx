@@ -27,14 +27,18 @@ export default function PinLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center gradient-mesh p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
+      
+      <Card className="w-full max-w-md glass shadow-2xl animate-scale-in relative">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-            <Lock className="h-6 w-6 text-primary" />
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+            <Lock className="h-8 w-8 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold">Enter PIN</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-primary to-amber-600 bg-clip-text text-transparent">
+            Enter PIN
+          </CardTitle>
+          <CardDescription className="text-base">
             Please enter your 4-digit PIN to access the application
           </CardDescription>
         </CardHeader>
@@ -48,19 +52,19 @@ export default function PinLogin() {
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
                 placeholder="Enter 4-digit PIN"
-                className="text-center text-2xl tracking-widest"
+                className="text-center text-2xl tracking-widest h-14 bg-background/50 border-2 border-primary/20 focus:border-primary/40 transition-all"
                 autoFocus
                 data-testid="input-pin"
               />
               {error && (
-                <p className="text-sm text-red-500 text-center" data-testid="text-error">
+                <p className="text-sm text-destructive text-center animate-fade-in" data-testid="text-error">
                   {error}
                 </p>
               )}
             </div>
             <Button
               type="submit"
-              className="w-full"
+              className="w-full h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all"
               disabled={pin.length !== 4 || isLoading}
               data-testid="button-login"
             >
